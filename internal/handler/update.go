@@ -16,8 +16,12 @@ func HandleUpdateGauge(writer http.ResponseWriter, request *http.Request) {
 
 	path := strings.TrimPrefix(request.URL.Path, "/update/gauge/")
 	data := strings.Split(path, "/")
-	if len(data) != 2 {
+	if len(data) > 2 {
 		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(data) < 2 {
+		writer.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -45,8 +49,12 @@ func HandleUpdateCounter(writer http.ResponseWriter, request *http.Request) {
 
 	path := strings.TrimPrefix(request.URL.Path, "/update/counter/")
 	data := strings.Split(path, "/")
-	if len(data) != 2 {
+	if len(data) > 2 {
 		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(data) < 2 {
+		writer.WriteHeader(http.StatusNotFound)
 		return
 	}
 
