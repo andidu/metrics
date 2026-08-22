@@ -10,7 +10,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/update/counter/", handler.HandleUpdateCounter)
 	mux.HandleFunc("/update/gauge/", handler.HandleUpdateGauge)
-	mux.HandleFunc("/", http.NotFound)
+	mux.HandleFunc("/", handler.HandleDefault)
 
 	err := http.ListenAndServe(`:8080`, mux)
 	if err != nil {
