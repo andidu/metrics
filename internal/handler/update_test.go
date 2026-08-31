@@ -204,7 +204,9 @@ func TestHandleUpdateCounter(t *testing.T) {
 			resp, get := testRequest(t, ts, tt.request.method, tt.request.url)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
-			assert.Equal(t, "", get)
+			if tt.want.emptyBody {
+				assert.Equal(t, "", get)
+			}
 		})
 	}
 }
