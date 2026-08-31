@@ -9,8 +9,6 @@ import (
 )
 
 func HandleUpdate(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Add("Content-Type", "text/plain")
-
 	if request.Method != http.MethodPost {
 		writer.WriteHeader(http.StatusMethodNotAllowed)
 		return
