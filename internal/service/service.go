@@ -42,7 +42,7 @@ func (m memStorageImpl) UpdateCounter(name string, value int) {
 func (m memStorageImpl) GetGauge(name string) (string, bool) {
 	fval, ok := m.gauges[name]
 	if ok {
-		return strconv.FormatFloat(fval, 'f', 2, 64), true
+		return strconv.FormatFloat(fval, 'f', 3, 64), true
 	}
 	return "", false
 }
