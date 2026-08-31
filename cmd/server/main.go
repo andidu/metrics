@@ -9,10 +9,8 @@ import (
 
 func main() {
 	r := chi.NewRouter()
-	r.Get("/counter/{name}", handler.HandleGetCounter)
-	r.Get("/gauge/{name}", handler.HandleGetGauge)
-	r.HandleFunc("/update/counter/{name}/{value}", handler.HandleUpdateCounter)
-	r.HandleFunc("/update/gauge/{name}/{value}", handler.HandleUpdateGauge)
+	r.Get("/{type}/{name}", handler.HandleGet)
+	r.HandleFunc("/update/{type}/{name}/{value}", handler.HandleUpdate)
 	r.HandleFunc("/", handler.HandleDefault)
 
 	err := http.ListenAndServe(`:8080`, r)

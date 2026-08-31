@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func HandleUpdateGauge(writer http.ResponseWriter, request *http.Request) {
+func HandleUpdate(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Add("Content-Type", "text/plain")
 
 	if request.Method != http.MethodPost {
@@ -16,9 +16,23 @@ func HandleUpdateGauge(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	t := chi.URLParam(request, "type")
 	name := chi.URLParam(request, "name")
 	strvalue := chi.URLParam(request, "value")
 
+	if t != "gauge" && t != "counter" {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if t == "gauge" {
+		handleUpdateGauge(writer, name, strvalue)
+	} else {
+		handleUpdateCounter(writer, name, strvalue)
+	}
+}
+
+func handleUpdateGauge(writer http.ResponseWriter, name, strvalue string) {
 	value, error := strconv.ParseFloat(strvalue, 64)
 	if error != nil {
 		writer.WriteHeader(http.StatusBadRequest)
@@ -29,17 +43,7 @@ func HandleUpdateGauge(writer http.ResponseWriter, request *http.Request) {
 	writer.WriteHeader(http.StatusOK)
 }
 
-func HandleUpdateCounter(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Add("Content-Type", "text/plain")
-
-	if request.Method != http.MethodPost {
-		writer.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	name := chi.URLParam(request, "name")
-	strvalue := chi.URLParam(request, "value")
-
+func handleUpdateCounter(writer http.ResponseWriter, name, strvalue string) {
 	value, error := strconv.Atoi(strvalue)
 	if error != nil {
 		writer.WriteHeader(http.StatusBadRequest)

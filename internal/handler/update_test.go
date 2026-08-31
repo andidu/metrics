@@ -84,7 +84,7 @@ func TestHandleUpdateGauge(t *testing.T) {
 			request := httptest.NewRequest(tt.request.method, tt.request.url, nil)
 
 			recorder := httptest.NewRecorder()
-			handler := http.HandlerFunc(handler.HandleUpdateGauge)
+			handler := http.HandlerFunc(handler.HandleUpdate)
 			handler(recorder, request)
 
 			result := recorder.Result()
@@ -170,7 +170,7 @@ func TestHandleUpdateCounter(t *testing.T) {
 			request := httptest.NewRequest(tt.request.method, tt.request.url, nil)
 
 			recorder := httptest.NewRecorder()
-			handler := http.HandlerFunc(handler.HandleUpdateCounter)
+			handler := http.HandlerFunc(handler.HandleUpdate)
 			handler(recorder, request)
 
 			result := recorder.Result()

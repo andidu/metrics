@@ -7,12 +7,24 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func HandleGetCounter(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Add("Content-Type", "text/plain")
+func HandleGet(writer http.ResponseWriter, request *http.Request) {
+	t := chi.URLParam(request, "type")
+	name := chi.URLParam(request, "name")
 
-	metric := chi.URLParam(request, "name")
+	if t != "gauge" && t != "counter" {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-	val, ok := service.TmpInMemoryStarage.GetCounter(metric)
+	if t == "gauge" {
+		handleGetGauge(writer, name)
+	} else {
+		handleGetCounter(writer, name)
+	}
+}
+
+func handleGetCounter(writer http.ResponseWriter, name string) {
+	val, ok := service.TmpInMemoryStarage.GetCounter(name)
 	if !ok {
 		writer.WriteHeader(http.StatusNotFound)
 		return
@@ -21,12 +33,8 @@ func HandleGetCounter(writer http.ResponseWriter, request *http.Request) {
 	writer.Write([]byte(val))
 }
 
-func HandleGetGauge(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Add("Content-Type", "text/plain")
-
-	metric := chi.URLParam(request, "name")
-
-	val, ok := service.TmpInMemoryStarage.GetGauge(metric)
+func handleGetGauge(writer http.ResponseWriter, name string) {
+	val, ok := service.TmpInMemoryStarage.GetGauge(name)
 	if !ok {
 		writer.WriteHeader(http.StatusNotFound)
 		return
