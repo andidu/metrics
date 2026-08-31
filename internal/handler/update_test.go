@@ -171,7 +171,7 @@ func TestHandleUpdateCounter(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusNotFound,
-				emptyBody:   true,
+				emptyBody:   false,
 			},
 		},
 		{
@@ -195,7 +195,7 @@ func TestHandleUpdateCounter(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
-				emptyBody:   false,
+				emptyBody:   true,
 			},
 		},
 	}
