@@ -9,7 +9,7 @@ import (
 func MetricsRouter() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.SetHeader("Content-Type", "text/plain; charset=utf-8"))
-	r.Get("/{type}/{name}", handler.HandleGet)
+	r.Get("/value/{type}/{name}", handler.HandleGet)
 	r.HandleFunc("/update/{type}/{name}/{value}", handler.HandleUpdate)
 	r.HandleFunc("/", handler.HandleDefault)
 
