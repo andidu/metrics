@@ -1,17 +1,17 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/andidu/metrics/internal/agent"
-	"github.com/spf13/pflag"
 )
 
 func main() {
-	pflag.Parse()
+	flag.Parse()
 
 	var gaugeUrlTemplate = fmt.Sprintf("http://%s/update/gauge", *serverAddress) + "/%s/%f"
 	var counterUrlTemplate = fmt.Sprintf("http://%s/update/counter", *serverAddress) + "/%s/%d"

@@ -1,16 +1,16 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 
 	"github.com/andidu/metrics/internal/handler"
 	"github.com/andidu/metrics/internal/router"
 	"github.com/andidu/metrics/internal/service"
-	"github.com/spf13/pflag"
 )
 
 func main() {
-	pflag.Parse()
+	flag.Parse()
 
 	storage := service.NewMemStorage()
 	handler := handler.New(storage)
