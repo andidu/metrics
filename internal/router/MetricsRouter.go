@@ -2,8 +2,8 @@ package router
 
 import (
 	"github.com/andidu/metrics/internal/handler"
-	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func MetricsRouter(handler handler.Handler) *chi.Mux {
