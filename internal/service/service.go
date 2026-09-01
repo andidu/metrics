@@ -2,6 +2,7 @@ package service
 
 import (
 	"strconv"
+	"strings"
 )
 
 type MemStorage interface {
@@ -44,7 +45,10 @@ func (m memStorageImpl) UpdateCounter(name string, value int) {
 func (m memStorageImpl) GetGauge(name string) (string, bool) {
 	fval, ok := m.gauges[name]
 	if ok {
-		return strconv.FormatFloat(fval, 'f', 2, 64), true
+		s := strconv.FormatFloat(fval, 'f', 3, 64)
+		s = strings.TrimRight(s, "0")
+		s = strings.TrimRight(s, ".")
+		return s, true
 	}
 	return "", false
 }
