@@ -6,7 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func MetricsRouter() *chi.Mux {
+func MetricsRouter(handler handler.Handler) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.SetHeader("Content-Type", "text/plain; charset=utf-8"))
 	r.Get("/value/{type}/{name}", handler.HandleGet)

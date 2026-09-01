@@ -3,11 +3,10 @@ package handler
 import (
 	"net/http"
 
-	"github.com/andidu/metrics/internal/service"
 	"github.com/go-chi/chi/v5"
 )
 
-func HandleGet(writer http.ResponseWriter, request *http.Request) {
+func (h Handler) HandleGet(writer http.ResponseWriter, request *http.Request) {
 	t := chi.URLParam(request, "type")
 	name := chi.URLParam(request, "name")
 
@@ -17,14 +16,14 @@ func HandleGet(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if t == "gauge" {
-		handleGetGauge(writer, name)
+		handleGetGauge(h, writer, name)
 	} else {
-		handleGetCounter(writer, name)
+		handleGetCounter(h, writer, name)
 	}
 }
 
-func handleGetCounter(writer http.ResponseWriter, name string) {
-	val, ok := service.TmpInMemoryStarage.GetCounter(name)
+func handleGetCounter(h Handler, writer http.ResponseWriter, name string) {
+	val, ok := h.storage.GetCounter(name)
 	if !ok {
 		writer.WriteHeader(http.StatusNotFound)
 		return
@@ -33,8 +32,8 @@ func handleGetCounter(writer http.ResponseWriter, name string) {
 	writer.Write([]byte(val))
 }
 
-func handleGetGauge(writer http.ResponseWriter, name string) {
-	val, ok := service.TmpInMemoryStarage.GetGauge(name)
+func handleGetGauge(h Handler, writer http.ResponseWriter, name string) {
+	val, ok := h.storage.GetGauge(name)
 	if !ok {
 		writer.WriteHeader(http.StatusNotFound)
 		return

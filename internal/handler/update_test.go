@@ -5,13 +5,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/andidu/metrics/internal/handler"
 	"github.com/andidu/metrics/internal/router"
+	"github.com/andidu/metrics/internal/service"
 	"github.com/andidu/metrics/internal/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHandleUpdateGauge(t *testing.T) {
-	ts := httptest.NewServer(router.MetricsRouter())
+	ts := httptest.NewServer(router.MetricsRouter(handler.New(service.NewMemStorage())))
 	defer ts.Close()
 
 	type want struct {
@@ -102,7 +104,7 @@ func TestHandleUpdateGauge(t *testing.T) {
 }
 
 func TestHandleUpdateCounter(t *testing.T) {
-	ts := httptest.NewServer(router.MetricsRouter())
+	ts := httptest.NewServer(router.MetricsRouter(handler.New(service.NewMemStorage())))
 	defer ts.Close()
 
 	type want struct {

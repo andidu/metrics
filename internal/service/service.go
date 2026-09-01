@@ -13,14 +13,16 @@ type MemStorage interface {
 	GetCounter(name string) (string, bool)
 }
 
+func NewMemStorage() MemStorage {
+	return memStorageImpl{
+		counters: make(map[string]int),
+		gauges:   make(map[string]float64),
+	}
+}
+
 type memStorageImpl struct {
 	counters map[string]int
 	gauges   map[string]float64
-}
-
-var TmpInMemoryStarage = memStorageImpl{
-	counters: make(map[string]int),
-	gauges:   make(map[string]float64),
 }
 
 func (m memStorageImpl) Gauges() map[string]float64 {
