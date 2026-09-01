@@ -1,33 +1,14 @@
 package handler_test
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/andidu/metrics/internal/router"
+	"github.com/andidu/metrics/internal/testutils"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-func testRequest(
-	t *testing.T,
-	ts *httptest.Server,
-	method, path string,
-) (*http.Response, string) {
-	req, err := http.NewRequest(method, ts.URL+path, nil)
-	require.NoError(t, err)
-
-	resp, err := ts.Client().Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	return resp, string(respBody)
-}
 
 func TestHandleUpdateGauge(t *testing.T) {
 	ts := httptest.NewServer(router.MetricsRouter())
@@ -110,7 +91,7 @@ func TestHandleUpdateGauge(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, get := testRequest(t, ts, tt.request.method, tt.request.url)
+			resp, get := testutils.TestRequest(t, ts, tt.request.method, tt.request.url)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			if tt.want.emptyBody {
@@ -201,7 +182,7 @@ func TestHandleUpdateCounter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, get := testRequest(t, ts, tt.request.method, tt.request.url)
+			resp, get := testutils.TestRequest(t, ts, tt.request.method, tt.request.url)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			if tt.want.emptyBody {
