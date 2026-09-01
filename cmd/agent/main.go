@@ -3,36 +3,49 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/andidu/metrics/internal/agent"
+	"github.com/spf13/pflag"
 )
 
 func main() {
+	pflag.Parse()
 
-	var gaugeUrlTemplate = "http://localhost:8080/update/gauge/%s/%f"
-	var counterUrlTemplate = "http://localhost:8080/update/counter/%s/%d"
-	var counter = 0
+	var gaugeUrlTemplate = fmt.Sprintf("http://%s/update/gauge", *serverAddress) + "/%s/%f"
+	var counterUrlTemplate = fmt.Sprintf("http://%s/update/counter", *serverAddress) + "/%s/%d"
+
+	var mutex sync.Mutex
+	var sample agent.MetricsSample
+
+	go func() {
+		for true {
+			metrics := agent.ObtainMetricsSample()
+			mutex.Lock()
+			sample = metrics
+			mutex.Unlock()
+			time.Sleep(time.Duration(*pollInterval) * time.Second)
+		}
+	}()
+
 	for true {
-		var metrics = agent.ObtainMetricsSample()
-
-		if counter%5 == 0 {
-			for name, value := range metrics.Counters {
-				_, err := http.Post(fmt.Sprintf(counterUrlTemplate, name, value), "text/plain", nil)
-				if err != nil {
-					fmt.Println(err.Error())
-				}
-			}
-
-			for name, value := range metrics.Gauges {
-				_, err := http.Post(fmt.Sprintf(gaugeUrlTemplate, name, value), "text/plain", nil)
-				if err != nil {
-					fmt.Println(err.Error())
-				}
+		time.Sleep(time.Duration(*repeatInterval) * time.Second)
+		mutex.Lock()
+		metrics := sample
+		mutex.Unlock()
+		for name, value := range metrics.Counters {
+			_, err := http.Post(fmt.Sprintf(counterUrlTemplate, name, value), "text/plain", nil)
+			if err != nil {
+				fmt.Println(err.Error())
 			}
 		}
 
-		counter += 1
-		time.Sleep(2 * time.Second)
+		for name, value := range metrics.Gauges {
+			_, err := http.Post(fmt.Sprintf(gaugeUrlTemplate, name, value), "text/plain", nil)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		}
 	}
 }
