@@ -6,18 +6,18 @@ import (
 )
 
 type MetricsSample struct {
-	Counters map[string]int
+	Counters map[string]int64
 	Gauges   map[string]float64
 }
 
-var counter = 0
+var counter = int64(0)
 
 func ObtainMetricsSample() MetricsSample {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
 
 	return MetricsSample{
-		Counters: map[string]int{
+		Counters: map[string]int64{
 			"counter": counter,
 		},
 		Gauges: map[string]float64{
