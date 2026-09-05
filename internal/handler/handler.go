@@ -1,14 +1,10 @@
 package handler
 
-import (
-	"github.com/andidu/metrics/internal/service"
-)
-
 type Handler struct {
-	storage service.MemStorage
+	storage MemStorage
 }
 
-func New(s service.MemStorage) Handler {
+func New(s MemStorage) Handler {
 	return Handler{
 		storage: s,
 	}
