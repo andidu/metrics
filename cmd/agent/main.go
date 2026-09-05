@@ -15,19 +15,24 @@ func main() {
 	var gaugeUrlTemplate = fmt.Sprintf("http://%s/update/gauge", flags.serverAddress) + "/%s/%f"
 	var counterUrlTemplate = fmt.Sprintf("http://%s/update/counter", flags.serverAddress) + "/%s/%d"
 
-	var mutex sync.Mutex
+	var mutex sync.Mutex // user for guarding sample, counter and sentCounter
 	var sample agent.MetricsSample
+	counter := int64(0)
 
 	go func() {
-		var counter = int64(0)
 		for {
-			metrics := agent.ObtainMetricsSample(counter)
+			var localCounter int64
+			mutex.Lock()
+			localCounter = counter
+			mutex.Unlock()
+
+			metrics := agent.ObtainMetricsSample(localCounter)
+
 			mutex.Lock()
 			sample = metrics
+			counter += 1
 			mutex.Unlock()
 			time.Sleep(time.Duration(flags.metrics.pollInterval) * time.Second)
-
-			counter += 1
 		}
 	}()
 
@@ -40,6 +45,11 @@ func main() {
 			_, err := http.Post(fmt.Sprintf(counterUrlTemplate, name, value), "text/plain", nil)
 			if err != nil {
 				fmt.Println(err.Error())
+			} else {
+				mutex.Lock()
+				counter -= value
+				metrics.InvalidateCounter(name)
+				mutex.Unlock()
 			}
 		}
 

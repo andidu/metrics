@@ -10,6 +10,10 @@ type MetricsSample struct {
 	Gauges   map[string]float64
 }
 
+func (m MetricsSample) InvalidateCounter(key string) {
+	m.Counters[key] = 0
+}
+
 func ObtainMetricsSample(counter int64) MetricsSample {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
