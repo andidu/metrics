@@ -19,12 +19,15 @@ func main() {
 	var sample agent.MetricsSample
 
 	go func() {
+		var counter = int64(0)
 		for {
-			metrics := agent.ObtainMetricsSample()
+			metrics := agent.ObtainMetricsSample(counter)
 			mutex.Lock()
 			sample = metrics
 			mutex.Unlock()
 			time.Sleep(time.Duration(flags.metrics.pollInterval) * time.Second)
+
+			counter += 1
 		}
 	}()
 

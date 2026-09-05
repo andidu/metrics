@@ -10,9 +10,7 @@ type MetricsSample struct {
 	Gauges   map[string]float64
 }
 
-var counter = int64(0)
-
-func ObtainMetricsSample() MetricsSample {
+func ObtainMetricsSample(counter int64) MetricsSample {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
 

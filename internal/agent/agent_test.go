@@ -52,7 +52,7 @@ func TestObtainMetricsSample(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := agent.ObtainMetricsSample()
+			got := agent.ObtainMetricsSample(0)
 
 			countersKeys := make([]string, 0, len(got.Counters))
 			for k := range got.Counters {
