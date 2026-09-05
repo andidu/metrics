@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"net/http"
 
 	"github.com/andidu/metrics/internal/handler"
@@ -10,13 +9,13 @@ import (
 )
 
 func main() {
-	flag.Parse()
+	var flags = parseFlags()
 
 	storage := service.NewMemStorage()
 	handler := handler.New(storage)
 	r := router.MetricsRouter(handler)
 
-	err := http.ListenAndServe(*serverAddress, r)
+	err := http.ListenAndServe(flags.serverAddress, r)
 	if err != nil {
 		println("Server didn't start", err.Error())
 	}

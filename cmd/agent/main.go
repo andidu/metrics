@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"net/http"
 	"sync"
@@ -11,10 +10,10 @@ import (
 )
 
 func main() {
-	flag.Parse()
+	var flags = parseFlags()
 
-	var gaugeUrlTemplate = fmt.Sprintf("http://%s/update/gauge", *serverAddress) + "/%s/%f"
-	var counterUrlTemplate = fmt.Sprintf("http://%s/update/counter", *serverAddress) + "/%s/%d"
+	var gaugeUrlTemplate = fmt.Sprintf("http://%s/update/gauge", flags.serverAddress) + "/%s/%f"
+	var counterUrlTemplate = fmt.Sprintf("http://%s/update/counter", flags.serverAddress) + "/%s/%d"
 
 	var mutex sync.Mutex
 	var sample agent.MetricsSample
@@ -25,12 +24,12 @@ func main() {
 			mutex.Lock()
 			sample = metrics
 			mutex.Unlock()
-			time.Sleep(time.Duration(*pollInterval) * time.Second)
+			time.Sleep(time.Duration(flags.metrics.pollInterval) * time.Second)
 		}
 	}()
 
 	for true {
-		time.Sleep(time.Duration(*repeatInterval) * time.Second)
+		time.Sleep(time.Duration(flags.metrics.repeatInterval) * time.Second)
 		mutex.Lock()
 		metrics := sample
 		mutex.Unlock()
