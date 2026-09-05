@@ -56,7 +56,7 @@ func (m memStorageImpl) GetGauge(name string) (string, bool) {
 func (m memStorageImpl) GetCounter(name string) (string, bool) {
 	ival, ok := m.counters[name]
 	if ok {
-		return strconv.Itoa(ival), true
+		return strconv.FormatInt(ival, 10), true
 	}
 	return "", false
 }
