@@ -10,6 +10,7 @@ func (h Handler) HandleDefault(writer http.ResponseWriter, request *http.Request
 
 	if request.Method != http.MethodGet {
 		writer.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	writer.Write([]byte("<h2>gauge</h2>"))
 	for name, value := range h.storage.Gauges() {
