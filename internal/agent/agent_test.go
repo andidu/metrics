@@ -16,7 +16,7 @@ func TestObtainMetricsSample(t *testing.T) {
 		{
 			name: "check fields",
 			counters: []string{
-				"counter",
+				"PollCount",
 			},
 			gauges: []string{
 				"Alloc",

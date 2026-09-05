@@ -16,7 +16,7 @@ func ObtainMetricsSample(counter int64) MetricsSample {
 
 	return MetricsSample{
 		Counters: map[string]int64{
-			"counter": counter,
+			"PollCount": counter,
 		},
 		Gauges: map[string]float64{
 			"Alloc":         float64(stats.Alloc),
