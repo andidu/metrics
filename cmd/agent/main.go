@@ -19,7 +19,7 @@ func main() {
 	var sample agent.MetricsSample
 
 	go func() {
-		for true {
+		for {
 			metrics := agent.ObtainMetricsSample()
 			mutex.Lock()
 			sample = metrics
@@ -28,7 +28,7 @@ func main() {
 		}
 	}()
 
-	for true {
+	for {
 		time.Sleep(time.Duration(flags.metrics.repeatInterval) * time.Second)
 		mutex.Lock()
 		metrics := sample
