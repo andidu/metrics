@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -44,7 +45,7 @@ func main() {
 		for name, value := range metrics.Counters {
 			resp, err := http.Post(fmt.Sprintf(counterUrlTemplate, name, value), "text/plain", nil)
 			if err != nil {
-				fmt.Println(err.Error())
+				log.Println(err.Error())
 			} else {
 				defer resp.Body.Close()
 				mutex.Lock()
@@ -57,7 +58,7 @@ func main() {
 		for name, value := range metrics.Gauges {
 			resp, err := http.Post(fmt.Sprintf(gaugeUrlTemplate, name, value), "text/plain", nil)
 			if err != nil {
-				fmt.Println(err.Error())
+				log.Println(err.Error())
 			}
 			defer resp.Body.Close()
 		}
