@@ -30,8 +30,8 @@ func (h Handler) HandleUpdate(writer http.ResponseWriter, request *http.Request)
 }
 
 func handleUpdateGauge(h Handler, writer http.ResponseWriter, name, strvalue string) {
-	value, error := strconv.ParseFloat(strvalue, 64)
-	if error != nil {
+	value, err := strconv.ParseFloat(strvalue, 64)
+	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -41,8 +41,8 @@ func handleUpdateGauge(h Handler, writer http.ResponseWriter, name, strvalue str
 }
 
 func handleUpdateCounter(h Handler, writer http.ResponseWriter, name, strvalue string) {
-	value, error := strconv.Atoi(strvalue)
-	if error != nil {
+	value, err := strconv.Atoi(strvalue)
+	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
