@@ -1,31 +1,31 @@
-package main
+package config
 
 import (
 	"flag"
 )
 
-type flags struct {
-	serverAddress string
-	metrics       metrics
+type config struct {
+	ServerAddress string
+	Metrics       metrics
 }
 
 type metrics struct {
-	repeatInterval int
-	pollInterval   int
+	RepeatInterval int
+	PollInterval   int
 }
 
-func parseFlags() flags {
+func ParseConfig() config {
 	var serverAddress = flag.String("a", "localhost:8080", "Server IP addres")
 	var repeatInterval = flag.Int("r", 10, "Metrics push repeat interval in seconds")
 	var pollInterval = flag.Int("p", 2, "Metrics collection repeat interval")
 
 	flag.Parse()
 
-	return flags{
-		serverAddress: *serverAddress,
-		metrics: metrics{
-			repeatInterval: *repeatInterval,
-			pollInterval:   *pollInterval,
+	return config{
+		ServerAddress: *serverAddress,
+		Metrics: metrics{
+			RepeatInterval: *repeatInterval,
+			PollInterval:   *pollInterval,
 		},
 	}
 }

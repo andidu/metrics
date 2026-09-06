@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/andidu/metrics/internal/agent"
+	config "github.com/andidu/metrics/internal/config/agent"
 )
 
 func main() {
-	var flags = parseFlags()
+	var flags = config.ParseConfig()
 
-	var gaugeUrlTemplate = fmt.Sprintf("http://%s/update/gauge", flags.serverAddress) + "/%s/%f"
-	var counterUrlTemplate = fmt.Sprintf("http://%s/update/counter", flags.serverAddress) + "/%s/%d"
+	var gaugeUrlTemplate = fmt.Sprintf("http://%s/update/gauge", flags.ServerAddress) + "/%s/%f"
+	var counterUrlTemplate = fmt.Sprintf("http://%s/update/counter", flags.ServerAddress) + "/%s/%d"
 
 	var mutex sync.Mutex // user for guarding sample, counter and sentCounter
 	var sample agent.MetricsSample
@@ -33,12 +34,12 @@ func main() {
 			sample = metrics
 			counter += 1
 			mutex.Unlock()
-			time.Sleep(time.Duration(flags.metrics.pollInterval) * time.Second)
+			time.Sleep(time.Duration(flags.Metrics.PollInterval) * time.Second)
 		}
 	}()
 
 	for {
-		time.Sleep(time.Duration(flags.metrics.repeatInterval) * time.Second)
+		time.Sleep(time.Duration(flags.Metrics.RepeatInterval) * time.Second)
 		mutex.Lock()
 		metrics := sample
 		mutex.Unlock()
