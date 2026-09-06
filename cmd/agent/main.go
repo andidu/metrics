@@ -42,10 +42,11 @@ func main() {
 		metrics := sample
 		mutex.Unlock()
 		for name, value := range metrics.Counters {
-			_, err := http.Post(fmt.Sprintf(counterUrlTemplate, name, value), "text/plain", nil)
+			resp, err := http.Post(fmt.Sprintf(counterUrlTemplate, name, value), "text/plain", nil)
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
+				defer resp.Body.Close()
 				mutex.Lock()
 				counter -= value
 				metrics.InvalidateCounter(name)
@@ -54,10 +55,11 @@ func main() {
 		}
 
 		for name, value := range metrics.Gauges {
-			_, err := http.Post(fmt.Sprintf(gaugeUrlTemplate, name, value), "text/plain", nil)
+			resp, err := http.Post(fmt.Sprintf(gaugeUrlTemplate, name, value), "text/plain", nil)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
+			defer resp.Body.Close()
 		}
 	}
 }
