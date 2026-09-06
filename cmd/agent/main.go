@@ -14,8 +14,8 @@ import (
 func main() {
 	var flags = config.ParseConfig()
 
-	var gaugeUrlTemplate = fmt.Sprintf("http://%s/update/gauge", flags.ServerAddress) + "/%s/%f"
-	var counterUrlTemplate = fmt.Sprintf("http://%s/update/counter", flags.ServerAddress) + "/%s/%d"
+	var gaugeURLTemplate = fmt.Sprintf("http://%s/update/gauge", flags.ServerAddress) + "/%s/%f"
+	var counterURLTemplate = fmt.Sprintf("http://%s/update/counter", flags.ServerAddress) + "/%s/%d"
 
 	var mutex sync.Mutex // user for guarding sample, counter and sentCounter
 	var sample agent.MetricsSample
@@ -44,24 +44,24 @@ func main() {
 		metrics := sample
 		mutex.Unlock()
 		for name, value := range metrics.Counters {
-			resp, err := http.Post(fmt.Sprintf(counterUrlTemplate, name, value), "text/plain", nil)
+			resp, err := http.Post(fmt.Sprintf(counterURLTemplate, name, value), "text/plain", nil)
 			if err != nil {
 				log.Println(err.Error())
 			} else {
-				defer resp.Body.Close()
 				mutex.Lock()
 				counter -= value
 				metrics.InvalidateCounter(name)
 				mutex.Unlock()
+				resp.Body.Close()
 			}
 		}
 
 		for name, value := range metrics.Gauges {
-			resp, err := http.Post(fmt.Sprintf(gaugeUrlTemplate, name, value), "text/plain", nil)
+			resp, err := http.Post(fmt.Sprintf(gaugeURLTemplate, name, value), "text/plain", nil)
 			if err != nil {
 				log.Println(err.Error())
 			}
-			defer resp.Body.Close()
+			resp.Body.Close()
 		}
 	}
 }

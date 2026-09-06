@@ -18,13 +18,13 @@ func (h Handler) HandleUpdate(writer http.ResponseWriter, request *http.Request)
 
 	err := h.service.UpdateMetric(t, name, strvalue)
 	switch err {
-	case UnknownMetricTypeErr:
+	case ErrUnknownMetricType:
 		writer.WriteHeader(http.StatusBadRequest)
 		return
-	case WrongMetricValueErr:
+	case ErrWrongMetricValue:
 		writer.WriteHeader(http.StatusBadRequest)
 		return
-	case InternalStorageErr:
+	case ErrInternalStorage:
 		writer.WriteHeader(http.StatusInternalServerError)
 		writer.Write([]byte(http.StatusText(http.StatusInternalServerError)))
 		return

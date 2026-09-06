@@ -101,7 +101,7 @@ func TestHandleGetValueGauge(t *testing.T) {
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.body, get)
-
+			resp.Body.Close()
 		})
 	}
 }
@@ -194,7 +194,7 @@ func TestHandleGetValueCounter(t *testing.T) {
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.body, get)
-
+			resp.Body.Close()
 		})
 	}
 }

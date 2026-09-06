@@ -99,6 +99,7 @@ func TestHandleUpdateGauge(t *testing.T) {
 			if tt.want.emptyBody {
 				assert.Equal(t, "", get)
 			}
+			resp.Body.Close()
 		})
 	}
 }
@@ -190,6 +191,7 @@ func TestHandleUpdateCounter(t *testing.T) {
 			if tt.want.emptyBody {
 				assert.Equal(t, "", get)
 			}
+			resp.Body.Close()
 		})
 	}
 }
