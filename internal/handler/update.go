@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -36,7 +37,13 @@ func handleUpdateGauge(h Handler, writer http.ResponseWriter, name, strvalue str
 		return
 	}
 
-	h.storage.UpdateGauge(name, value)
+	err = h.storage.UpdateGauge(name, value)
+	if err != nil {
+		log.Println("Internal storage error", err)
+		writer.WriteHeader(http.StatusInternalServerError)
+		writer.Write([]byte(http.StatusText(http.StatusInternalServerError)))
+		return
+	}
 	writer.WriteHeader(http.StatusOK)
 }
 
@@ -47,6 +54,12 @@ func handleUpdateCounter(h Handler, writer http.ResponseWriter, name, strvalue s
 		return
 	}
 
-	h.storage.UpdateCounter(name, value)
+	err = h.storage.UpdateCounter(name, value)
+	if err != nil {
+		log.Println("Internal storage error", err)
+		writer.WriteHeader(http.StatusInternalServerError)
+		writer.Write([]byte(http.StatusText(http.StatusInternalServerError)))
+		return
+	}
 	writer.WriteHeader(http.StatusOK)
 }
