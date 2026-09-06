@@ -3,8 +3,8 @@ package handler
 type MemStorage interface {
 	Gauges() map[string]float64
 	Counters() map[string]int64
-	UpdateGauge(name string, value float64)
-	UpdateCounter(name string, value int)
-	GetGauge(name string) (string, bool)
-	GetCounter(name string) (string, bool)
+	UpdateGauge(name string, value float64) error
+	UpdateCounter(name string, value int) error
+	GetGauge(name string) (string, error)
+	GetCounter(name string) (string, error)
 }

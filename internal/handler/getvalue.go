@@ -23,8 +23,8 @@ func (h Handler) HandleGet(writer http.ResponseWriter, request *http.Request) {
 }
 
 func handleGetCounter(h Handler, writer http.ResponseWriter, name string) {
-	val, ok := h.storage.GetCounter(name)
-	if !ok {
+	val, err := h.storage.GetCounter(name)
+	if err != nil {
 		writer.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -33,8 +33,8 @@ func handleGetCounter(h Handler, writer http.ResponseWriter, name string) {
 }
 
 func handleGetGauge(h Handler, writer http.ResponseWriter, name string) {
-	val, ok := h.storage.GetGauge(name)
-	if !ok {
+	val, err := h.storage.GetGauge(name)
+	if err != nil {
 		writer.WriteHeader(http.StatusNotFound)
 		return
 	}
