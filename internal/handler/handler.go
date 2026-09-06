@@ -1,11 +1,13 @@
 package handler
 
 type Handler struct {
-	storage MemStorage
+	service Service
 }
 
 func New(s MemStorage) Handler {
 	return Handler{
-		storage: s,
+		service: Service{
+			storage: s,
+		},
 	}
 }

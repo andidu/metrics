@@ -1,14 +1,8 @@
 package service
 
 import (
-	"errors"
-	"strconv"
-	"strings"
-
 	"github.com/andidu/metrics/internal/handler"
 )
-
-var noElementErr = errors.New("No such element found")
 
 func NewMemStorage() handler.MemStorage {
 	return memStorageImpl{
@@ -38,23 +32,4 @@ func (m memStorageImpl) UpdateGauge(name string, value float64) error {
 func (m memStorageImpl) UpdateCounter(name string, value int) error {
 	m.counters[name] += int64(value)
 	return nil
-}
-
-func (m memStorageImpl) GetGauge(name string) (string, error) {
-	fval, ok := m.gauges[name]
-	if ok {
-		s := strconv.FormatFloat(fval, 'f', 3, 64)
-		s = strings.TrimRight(s, "0")
-		s = strings.TrimRight(s, ".")
-		return s, nil
-	}
-	return "", noElementErr
-}
-
-func (m memStorageImpl) GetCounter(name string) (string, error) {
-	ival, ok := m.counters[name]
-	if ok {
-		return strconv.FormatInt(ival, 10), nil
-	}
-	return "", noElementErr
 }

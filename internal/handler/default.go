@@ -13,12 +13,12 @@ func (h Handler) HandleDefault(writer http.ResponseWriter, request *http.Request
 		return
 	}
 	writer.Write([]byte("<h2>gauge</h2>"))
-	for name, value := range h.storage.Gauges() {
+	for name, value := range h.service.Gauges() {
 		writer.Write(fmt.Appendf([]byte{}, "<div>%s - %f</div>", name, value))
 	}
 
 	writer.Write([]byte("<h2>counter</h2>"))
-	for name, value := range h.storage.Counters() {
+	for name, value := range h.service.Counters() {
 		writer.Write(fmt.Appendf([]byte{}, "<div>%s - %d</div>", name, value))
 	}
 }

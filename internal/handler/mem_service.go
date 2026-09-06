@@ -5,6 +5,4 @@ type MemStorage interface {
 	Counters() map[string]int64
 	UpdateGauge(name string, value float64) error
 	UpdateCounter(name string, value int) error
-	GetGauge(name string) (string, error)
-	GetCounter(name string) (string, error)
 }
