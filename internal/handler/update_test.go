@@ -54,7 +54,7 @@ func TestHandler_HandleUpdate(t *testing.T) {
 				initialValue = memStorage.Counters()[tt.m.ID]
 			}
 
-			resp, _ := testutils.TestRequestWithBody(t, ts, http.MethodPost, "/update", bytes.NewReader(body))
+			resp, _ := testutils.TestRequestWithBody(t, ts, http.MethodPost, "/update/", bytes.NewReader(body))
 			assert.Equal(t, 200, resp.StatusCode)
 			if tt.m.MType == models.Gauge {
 				assert.Equal(t, *tt.m.Value, memStorage.Gauges()[tt.m.ID])
