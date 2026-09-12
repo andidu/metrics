@@ -61,6 +61,7 @@ func TestHandler_HandleUpdate(t *testing.T) {
 			} else {
 				assert.Equal(t, (*(tt.m.Delta))+initialValue, memStorage.Counters()[tt.m.ID])
 			}
+			resp.Body.Close()
 		})
 	}
 }
