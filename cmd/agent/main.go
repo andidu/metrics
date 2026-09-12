@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,13 +11,13 @@ import (
 
 	"github.com/andidu/metrics/internal/agent"
 	config "github.com/andidu/metrics/internal/config/agent"
+	models "github.com/andidu/metrics/internal/model"
 )
 
 func main() {
 	var flags = config.ParseConfig()
 
-	var gaugeURLTemplate = fmt.Sprintf("http://%s/update/gauge", flags.ServerAddress) + "/%s/%f"
-	var counterURLTemplate = fmt.Sprintf("http://%s/update/counter", flags.ServerAddress) + "/%s/%d"
+	var URLTemplate = fmt.Sprintf("http://%s/update/", flags.ServerAddress)
 
 	var mutex sync.Mutex // user for guarding sample, counter and sentCounter
 	var sample agent.MetricsSample
@@ -44,7 +46,19 @@ func main() {
 		metrics := sample
 		mutex.Unlock()
 		for name, value := range metrics.Counters {
-			resp, err := http.Post(fmt.Sprintf(counterURLTemplate, name, value), "text/plain", nil)
+			v := int64(value)
+			var m = models.Metrics{
+				ID:    name,
+				MType: models.Counter,
+				Delta: &v,
+			}
+			body, err := json.Marshal(m)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+
+			resp, err := http.Post(URLTemplate, "application/json", bytes.NewReader(body))
 			if err != nil {
 				log.Println(err.Error())
 			} else {
@@ -57,11 +71,24 @@ func main() {
 		}
 
 		for name, value := range metrics.Gauges {
-			resp, err := http.Post(fmt.Sprintf(gaugeURLTemplate, name, value), "text/plain", nil)
+			var m = models.Metrics{
+				ID:    name,
+				MType: models.Gauge,
+				Value: &value,
+			}
+			body, err := json.Marshal(m)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+
+			resp, err := http.Post(URLTemplate, "application/json", bytes.NewReader(body))
 			if err != nil {
 				log.Println(err.Error())
 			}
-			resp.Body.Close()
+			if err == nil {
+				resp.Body.Close()
+			}
 		}
 	}
 }
