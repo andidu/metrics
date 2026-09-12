@@ -17,6 +17,11 @@ func (h Handler) HandleUpdateTypeNameValue(writer http.ResponseWriter, request *
 	strvalue := chi.URLParam(request, "value")
 
 	err := h.service.UpdateMetric(t, name, strvalue)
+	createUpdateResponse(err, writer)
+}
+
+// checks the error from Service.UpdateMetric and returns the correct result for the user
+func createUpdateResponse(err error, writer http.ResponseWriter) {
 	switch err {
 	case ErrUnknownMetricType:
 		writer.WriteHeader(http.StatusBadRequest)

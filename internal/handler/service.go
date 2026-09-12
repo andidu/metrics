@@ -5,6 +5,8 @@ import (
 	"log"
 	"strconv"
 	"strings"
+
+	models "github.com/andidu/metrics/internal/model"
 )
 
 type Service struct {
@@ -61,6 +63,28 @@ func (s Service) updateCounter(name string, strvalue string) error {
 		return ErrInternalStorage
 	}
 	return nil
+}
+
+func (s Service) UpdateMetrics(m models.Metrics) error {
+	t := m.MType
+	if t != "gauge" && t != "counter" {
+		return ErrUnknownMetricType
+	}
+	if t == "gauge" {
+		err := s.storage.UpdateGauge(m.ID, *m.Value)
+		if err != nil {
+			log.Println("Internal storage error", err)
+			return ErrInternalStorage
+		}
+		return nil
+	} else {
+		err := s.storage.UpdateCounter(m.ID, int(*m.Delta))
+		if err != nil {
+			log.Println("Internal storage error", err)
+			return ErrInternalStorage
+		}
+		return nil
+	}
 }
 
 func (s Service) GetGauge(name string) (string, error) {
