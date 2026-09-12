@@ -7,9 +7,13 @@ import (
 	"github.com/andidu/metrics/internal/handler"
 	"github.com/andidu/metrics/internal/router"
 	"github.com/andidu/metrics/internal/service"
+	"github.com/andidu/metrics/internal/utils"
 )
 
 func main() {
+	utils.InitLogger()
+	defer utils.Logger.Sync()
+
 	var flags = config.ParseConfig()
 
 	storage := service.NewMemStorage()
