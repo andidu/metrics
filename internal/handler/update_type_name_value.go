@@ -6,7 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (h Handler) HandleUpdate(writer http.ResponseWriter, request *http.Request) {
+func (h Handler) HandleUpdateTypeNameValue(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		writer.WriteHeader(http.StatusMethodNotAllowed)
 		return
