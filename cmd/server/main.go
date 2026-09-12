@@ -20,7 +20,7 @@ func main() {
 	handler := handler.New(storage)
 	r := router.MetricsRouter(handler)
 
-	err := http.ListenAndServe(flags.ServerAddress, r)
+	err := http.ListenAndServe(flags.ServerAddress, utils.WithLogging(r))
 	if err != nil {
 		println("Server didn't start", err.Error())
 	}
