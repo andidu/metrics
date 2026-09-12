@@ -47,7 +47,7 @@ func main() {
 		mutex.Unlock()
 		for name, value := range metrics.Counters {
 			v := int64(value)
-			var m models.Metrics = models.Metrics{
+			var m = models.Metrics{
 				ID:    name,
 				MType: models.Counter,
 				Delta: &v,
@@ -71,7 +71,7 @@ func main() {
 		}
 
 		for name, value := range metrics.Gauges {
-			var m models.Metrics = models.Metrics{
+			var m = models.Metrics{
 				ID:    name,
 				MType: models.Gauge,
 				Value: &value,
