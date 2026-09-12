@@ -17,7 +17,7 @@ import (
 func main() {
 	var flags = config.ParseConfig()
 
-	var URLTemplate = fmt.Sprintf("http://%s/update", flags.ServerAddress)
+	var URLTemplate = fmt.Sprintf("http://%s/update/", flags.ServerAddress)
 
 	var mutex sync.Mutex // user for guarding sample, counter and sentCounter
 	var sample agent.MetricsSample
