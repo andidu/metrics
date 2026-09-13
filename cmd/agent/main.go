@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -58,11 +59,26 @@ func main() {
 				return
 			}
 
-			req, err := http.NewRequest(http.MethodPost, URLTemplate, bytes.NewReader(body))
+			var compressed bytes.Buffer
+			gw, err := gzip.NewWriterLevel(&compressed, gzip.BestCompression)
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
+
+			_, err = gw.Write(body)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+
+			gw.Close()
+			req, err := http.NewRequest(http.MethodPost, URLTemplate, &compressed)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+			req.Header.Set("Content-Encoding", "gzip")
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Accept-Encoding", "gzip")
 			resp, err := http.DefaultClient.Do(req)
@@ -88,12 +104,26 @@ func main() {
 				log.Println(err.Error())
 				return
 			}
-
-			req, err := http.NewRequest(http.MethodPost, URLTemplate, bytes.NewReader(body))
+			var compressed bytes.Buffer
+			gw, err := gzip.NewWriterLevel(&compressed, gzip.BestCompression)
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
+
+			_, err = gw.Write(body)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+
+			gw.Close()
+			req, err := http.NewRequest(http.MethodPost, URLTemplate, &compressed)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+			req.Header.Set("Content-Encoding", "gzip")
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Accept-Encoding", "gzip")
 			resp, err := http.DefaultClient.Do(req)
