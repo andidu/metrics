@@ -23,7 +23,7 @@ func main() {
 		return
 	}
 
-	var storage handler.MemStorage = restoreMemStorageOrCreateNew(flags.Store)
+	var storage = restoreMemStorageOrCreateNew(flags.Store)
 	if storage == nil {
 		return
 	}
