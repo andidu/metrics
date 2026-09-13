@@ -33,3 +33,8 @@ func (m memStorageImpl) UpdateCounter(name string, value int) error {
 	m.counters[name] += int64(value)
 	return nil
 }
+
+func (m memStorageImpl) OverrideCounter(name string, value int64) error {
+	m.counters[name] = value
+	return nil
+}
