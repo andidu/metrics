@@ -2,6 +2,8 @@ package config
 
 import (
 	"flag"
+	"os"
+	"strconv"
 )
 
 type config struct {
@@ -21,6 +23,21 @@ func ParseConfig() config {
 
 	flag.Parse()
 
+	addressEnv, foundAddress := os.LookupEnv("ADDRESS")
+	if foundAddress {
+		serverAddress = &addressEnv
+	}
+
+	reportIntervalEnv, foundReportInterval := lookupEnvInt("REPORT_INTERVAL")
+	if foundReportInterval {
+		repeatInterval = &reportIntervalEnv
+	}
+
+	pollIntervalEnv, foundPullInterval := lookupEnvInt("POLL_INTERVAL")
+	if foundPullInterval {
+		pollInterval = &pollIntervalEnv
+	}
+
 	return config{
 		ServerAddress: *serverAddress,
 		Metrics: metrics{
@@ -28,4 +45,19 @@ func ParseConfig() config {
 			PollInterval:   *pollInterval,
 		},
 	}
+}
+
+func lookupEnvInt(key string) (int, bool) {
+	str, found := os.LookupEnv(key)
+
+	if !found {
+		return 0, false
+	}
+
+	value, err := strconv.Atoi(str)
+	if err != nil {
+		return 0, false
+	}
+
+	return value, true
 }
