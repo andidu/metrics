@@ -58,7 +58,14 @@ func main() {
 				return
 			}
 
-			resp, err := http.Post(URLTemplate, "application/json", bytes.NewReader(body))
+			req, err := http.NewRequest(http.MethodPost, URLTemplate, bytes.NewReader(body))
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept-Encoding", "gzip")
+			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				log.Println(err.Error())
 			} else {
@@ -82,7 +89,14 @@ func main() {
 				return
 			}
 
-			resp, err := http.Post(URLTemplate, "application/json", bytes.NewReader(body))
+			req, err := http.NewRequest(http.MethodPost, URLTemplate, bytes.NewReader(body))
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept-Encoding", "gzip")
+			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				log.Println(err.Error())
 			}
