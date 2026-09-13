@@ -1,28 +1,29 @@
 package config
 
 import (
+	"errors"
 	"flag"
 	"os"
 	"strconv"
-
-	"github.com/andidu/metrics/internal/utils"
 )
 
 type config struct {
 	ServerAddress string
-	Store         store
+	Store         Store
 }
 
-type store struct {
+type Store struct {
 	StoreInterval   uint
 	FileStoragePath string
 	Restore         bool
 }
 
-func ParseConfig() config {
+var ErrUnableToParseEnvVariable = errors.New("unable to parse env variable")
+
+func ParseConfig() (config, error) {
 	var serverAddress = flag.String("a", "localhost:8080", "Server IP addres")
 	var storeInterval = flag.Uint("i", 300, "Interval between metrics disk dumps")
-	var fileStoragePath = flag.String("f", "dumps/metrics.txt", "File path to the metrics dump file")
+	var fileStoragePath = flag.String("f", "metrics.txt", "File path to the metrics dump file")
 	var restore = flag.Bool("r", false, "Whether to restore metrics state from fileStoragePath")
 
 	flag.Parse()
@@ -35,7 +36,7 @@ func ParseConfig() config {
 	if found {
 		uint64Value, err := strconv.ParseUint(storeIntervalEnv, 10, 64)
 		if err != nil {
-			utils.Logger.Errorln("unable to parse STORE_INTERVAL value")
+			return config{}, ErrUnableToParseEnvVariable
 		} else {
 			uintValue := uint(uint64Value)
 			storeInterval = &uintValue
@@ -49,7 +50,7 @@ func ParseConfig() config {
 	if found {
 		boolValue, err := strconv.ParseBool(restoreEnv)
 		if err != nil {
-			utils.Logger.Errorln("unable to parse RESTORE value")
+			return config{}, ErrUnableToParseEnvVariable
 		} else {
 			restore = &boolValue
 		}
@@ -57,10 +58,10 @@ func ParseConfig() config {
 
 	return config{
 		ServerAddress: *serverAddress,
-		Store: store{
+		Store: Store{
 			StoreInterval:   *storeInterval,
 			FileStoragePath: *fileStoragePath,
 			Restore:         *restore,
 		},
-	}
+	}, nil
 }
