@@ -51,11 +51,10 @@ func main() {
 		metrics := sample
 		mutex.Unlock()
 		for name, value := range metrics.Counters {
-			v := int64(value)
 			var m = models.Metrics{
 				ID:    name,
 				MType: models.Counter,
-				Delta: &v,
+				Delta: &value,
 			}
 
 			resp, err := sendMetrics(URLTemplate, m)

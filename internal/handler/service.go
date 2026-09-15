@@ -52,7 +52,7 @@ func (s Service) updateGauge(name string, strvalue string) error {
 }
 
 func (s Service) updateCounter(name string, strvalue string) error {
-	value, err := strconv.Atoi(strvalue)
+	value, err := strconv.ParseInt(strvalue, 10, 64)
 	if err != nil {
 		return ErrWrongMetricValue
 	}
@@ -84,7 +84,7 @@ func (s Service) UpdateMetrics(m models.Metrics) error {
 		if m.Delta == nil {
 			return ErrWrongMetricValue
 		}
-		err := s.storage.UpdateCounter(m.ID, int(*m.Delta))
+		err := s.storage.UpdateCounter(m.ID, *m.Delta)
 		if err != nil {
 			log.Println("Internal storage error", err)
 			return ErrInternalStorage

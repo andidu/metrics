@@ -48,9 +48,9 @@ func (m *memStorageImpl) UpdateGauge(name string, value float64) error {
 	return nil
 }
 
-func (m *memStorageImpl) UpdateCounter(name string, value int) error {
+func (m *memStorageImpl) UpdateCounter(name string, value int64) error {
 	m.m.Lock()
-	m.counters[name] += int64(value)
+	m.counters[name] += value
 	m.m.Unlock()
 	return nil
 }

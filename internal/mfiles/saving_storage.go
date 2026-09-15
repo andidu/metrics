@@ -17,7 +17,7 @@ func (s SavingStorage) UpdateGauge(name string, value float64) error {
 	return err
 }
 
-func (s SavingStorage) UpdateCounter(name string, value int) error {
+func (s SavingStorage) UpdateCounter(name string, value int64) error {
 	err := s.MemStorage.UpdateCounter(name, value)
 	if err == nil {
 		return Save(s.Filename, s.MemStorage)
