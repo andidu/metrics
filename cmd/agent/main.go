@@ -53,35 +53,8 @@ func main() {
 				MType: models.Counter,
 				Delta: &v,
 			}
-			body, err := json.Marshal(m)
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
 
-			var compressed bytes.Buffer
-			gw, err := gzip.NewWriterLevel(&compressed, gzip.BestCompression)
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-
-			_, err = gw.Write(body)
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-
-			gw.Close()
-			req, err := http.NewRequest(http.MethodPost, URLTemplate, &compressed)
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-			req.Header.Set("Content-Encoding", "gzip")
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Accept-Encoding", "gzip")
-			resp, err := http.DefaultClient.Do(req)
+			resp, err := sendMetrics(URLTemplate, m)
 			if err != nil {
 				log.Println(err.Error())
 			} else {
@@ -99,40 +72,41 @@ func main() {
 				MType: models.Gauge,
 				Value: &value,
 			}
-			body, err := json.Marshal(m)
+			resp, err := sendMetrics(URLTemplate, m)
 			if err != nil {
 				log.Println(err.Error())
-				return
-			}
-			var compressed bytes.Buffer
-			gw, err := gzip.NewWriterLevel(&compressed, gzip.BestCompression)
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-
-			_, err = gw.Write(body)
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-
-			gw.Close()
-			req, err := http.NewRequest(http.MethodPost, URLTemplate, &compressed)
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-			req.Header.Set("Content-Encoding", "gzip")
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Accept-Encoding", "gzip")
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				log.Println(err.Error())
-			}
-			if err == nil {
+			} else {
 				resp.Body.Close()
 			}
 		}
 	}
+}
+
+func sendMetrics(url string, m models.Metrics) (*http.Response, error) {
+	body, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+
+	var compressed bytes.Buffer
+	gw, err := gzip.NewWriterLevel(&compressed, gzip.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = gw.Write(body)
+	if err != nil {
+		return nil, err
+	}
+
+	gw.Close()
+	req, err := http.NewRequest(http.MethodPost, url, &compressed)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Encoding", "gzip")
+	resp, err := http.DefaultClient.Do(req)
+	return resp, err
 }
