@@ -17,7 +17,7 @@ type metrics struct {
 	PollInterval   int
 }
 
-var NoEnvVariableFound = errors.New("no env variable found")
+var errNoEnvVariableFound = errors.New("no env variable found")
 
 func ParseConfig() (config, error) {
 	var serverAddress = flag.String("a", "localhost:8080", "Server IP addres")
@@ -56,7 +56,7 @@ func lookupEnvInt(key string) (int, error) {
 	str, found := os.LookupEnv(key)
 
 	if !found {
-		return 0, NoEnvVariableFound
+		return 0, errNoEnvVariableFound
 	}
 
 	value, err := strconv.Atoi(str)
