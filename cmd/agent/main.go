@@ -16,7 +16,11 @@ import (
 )
 
 func main() {
-	var flags = config.ParseConfig()
+	var flags, err = config.ParseConfig()
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
 
 	var URLTemplate = fmt.Sprintf("http://%s/update/", flags.ServerAddress)
 
