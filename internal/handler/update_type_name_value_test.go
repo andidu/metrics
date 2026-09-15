@@ -6,24 +6,20 @@ import (
 	"testing"
 
 	"github.com/andidu/metrics/internal/handler"
+	"github.com/andidu/metrics/internal/router"
 	"github.com/andidu/metrics/internal/service"
 	"github.com/andidu/metrics/internal/testutils"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/andidu/metrics/internal/router"
 )
 
-func TestHandleGetValueGauge(t *testing.T) {
-	storage := service.NewMemStorage()
-	ts := httptest.NewServer(router.MetricsRouter(handler.New(storage)))
+func TestHandleUpdateGauge(t *testing.T) {
+	ts := httptest.NewServer(router.MetricsRouter(handler.New(service.NewMemStorage())))
 	defer ts.Close()
-	storage.OverrideCounter("name", 5)
-	storage.UpdateGauge("name1", 9.011)
 
 	type want struct {
 		contentType string
 		statusCode  int
-		body        string
+		emptyBody   bool
 	}
 	type request struct {
 		url    string
@@ -37,61 +33,61 @@ func TestHandleGetValueGauge(t *testing.T) {
 		{
 			name: "happy path",
 			request: request{
-				url:    "/value/gauge/name1",
-				method: http.MethodGet,
+				url:    "/update/gauge/name/4.001",
+				method: http.MethodPost,
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusOK,
-				body:        "9.011",
+				emptyBody:   true,
 			},
 		},
 		{
 			name: "wrong method",
 			request: request{
-				url:    "/value/gauge/name1",
-				method: http.MethodPost,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusMethodNotAllowed,
-				body:        "",
-			},
-		},
-		{
-			name: "with value",
-			request: request{
-				url:    "/value/gauge/name1/6.901",
+				url:    "/update/gauge/name/4.001",
 				method: http.MethodGet,
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusMethodNotAllowed,
+				emptyBody:   true,
+			},
+		},
+		{
+			name: "no value",
+			request: request{
+				url:    "/update/gauge/name",
+				method: http.MethodPost,
+			},
+			want: want{
+				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusNotFound,
-				body:        "404 page not found\n",
+				emptyBody:   false,
 			},
 		},
 		{
 			name: "wrong url",
 			request: request{
-				url:    "/value/gauge/name1/name1",
-				method: http.MethodGet,
+				url:    "/update/gauge/name/name/4.001",
+				method: http.MethodPost,
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusNotFound,
-				body:        "404 page not found\n",
+				emptyBody:   false,
 			},
 		},
 		{
-			name: "wrong name",
+			name: "wrong value",
 			request: request{
-				url:    "/value/gauge/name",
-				method: http.MethodGet,
+				url:    "/update/gauge/name/4.o01",
+				method: http.MethodPost,
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusNotFound,
-				body:        "",
+				statusCode:  http.StatusBadRequest,
+				emptyBody:   true,
 			},
 		},
 	}
@@ -100,23 +96,22 @@ func TestHandleGetValueGauge(t *testing.T) {
 			resp, get := testutils.TestRequest(t, ts, tt.request.method, tt.request.url)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
-			assert.Equal(t, tt.want.body, get)
+			if tt.want.emptyBody {
+				assert.Equal(t, "", get)
+			}
 			resp.Body.Close()
 		})
 	}
 }
 
-func TestHandleGetValueCounter(t *testing.T) {
-	storage := service.NewMemStorage()
-	ts := httptest.NewServer(router.MetricsRouter(handler.New(storage)))
+func TestHandleUpdateCounter(t *testing.T) {
+	ts := httptest.NewServer(router.MetricsRouter(handler.New(service.NewMemStorage())))
 	defer ts.Close()
-	storage.OverrideCounter("name", 5)
-	storage.UpdateGauge("name1", 9.011)
 
 	type want struct {
 		contentType string
 		statusCode  int
-		body        string
+		emptyBody   bool
 	}
 	type request struct {
 		url    string
@@ -130,61 +125,61 @@ func TestHandleGetValueCounter(t *testing.T) {
 		{
 			name: "happy path",
 			request: request{
-				url:    "/value/counter/name",
-				method: http.MethodGet,
+				url:    "/update/counter/name/4",
+				method: http.MethodPost,
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusOK,
-				body:        "5",
+				emptyBody:   true,
 			},
 		},
 		{
 			name: "wrong method",
 			request: request{
-				url:    "/value/counter/name",
-				method: http.MethodPost,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusMethodNotAllowed,
-				body:        "",
-			},
-		},
-		{
-			name: "with value",
-			request: request{
-				url:    "/value/counter/name/9",
+				url:    "/update/counter/name/4",
 				method: http.MethodGet,
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusMethodNotAllowed,
+				emptyBody:   true,
+			},
+		},
+		{
+			name: "no value",
+			request: request{
+				url:    "/update/counter/name",
+				method: http.MethodPost,
+			},
+			want: want{
+				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusNotFound,
-				body:        "404 page not found\n",
+				emptyBody:   false,
 			},
 		},
 		{
 			name: "wrong url",
 			request: request{
-				url:    "/value/counter/name/name",
-				method: http.MethodGet,
+				url:    "/update/counter/name/name/4",
+				method: http.MethodPost,
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusNotFound,
-				body:        "404 page not found\n",
+				emptyBody:   false,
 			},
 		},
 		{
-			name: "wrong name",
+			name: "wrong value",
 			request: request{
-				url:    "/value/counter/name1",
-				method: http.MethodGet,
+				url:    "/update/counter/name/4.o01",
+				method: http.MethodPost,
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusNotFound,
-				body:        "",
+				statusCode:  http.StatusBadRequest,
+				emptyBody:   true,
 			},
 		},
 	}
@@ -193,7 +188,9 @@ func TestHandleGetValueCounter(t *testing.T) {
 			resp, get := testutils.TestRequest(t, ts, tt.request.method, tt.request.url)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
-			assert.Equal(t, tt.want.body, get)
+			if tt.want.emptyBody {
+				assert.Equal(t, "", get)
+			}
 			resp.Body.Close()
 		})
 	}

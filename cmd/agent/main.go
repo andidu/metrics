@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,13 +12,17 @@ import (
 
 	"github.com/andidu/metrics/internal/agent"
 	config "github.com/andidu/metrics/internal/config/agent"
+	models "github.com/andidu/metrics/internal/model"
 )
 
 func main() {
-	var flags = config.ParseConfig()
+	var flags, err = config.ParseConfig()
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
 
-	var gaugeURLTemplate = fmt.Sprintf("http://%s/update/gauge", flags.ServerAddress) + "/%s/%f"
-	var counterURLTemplate = fmt.Sprintf("http://%s/update/counter", flags.ServerAddress) + "/%s/%d"
+	var URLTemplate = fmt.Sprintf("http://%s/update/", flags.ServerAddress)
 
 	var mutex sync.Mutex // user for guarding sample, counter and sentCounter
 	var sample agent.MetricsSample
@@ -44,7 +51,13 @@ func main() {
 		metrics := sample
 		mutex.Unlock()
 		for name, value := range metrics.Counters {
-			resp, err := http.Post(fmt.Sprintf(counterURLTemplate, name, value), "text/plain", nil)
+			var m = models.Metrics{
+				ID:    name,
+				MType: models.Counter,
+				Delta: &value,
+			}
+
+			resp, err := sendMetrics(URLTemplate, m)
 			if err != nil {
 				log.Println(err.Error())
 			} else {
@@ -57,11 +70,46 @@ func main() {
 		}
 
 		for name, value := range metrics.Gauges {
-			resp, err := http.Post(fmt.Sprintf(gaugeURLTemplate, name, value), "text/plain", nil)
+			var m = models.Metrics{
+				ID:    name,
+				MType: models.Gauge,
+				Value: &value,
+			}
+			resp, err := sendMetrics(URLTemplate, m)
 			if err != nil {
 				log.Println(err.Error())
+			} else {
+				resp.Body.Close()
 			}
-			resp.Body.Close()
 		}
 	}
+}
+
+func sendMetrics(url string, m models.Metrics) (*http.Response, error) {
+	body, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+
+	var compressed bytes.Buffer
+	gw, err := gzip.NewWriterLevel(&compressed, gzip.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = gw.Write(body)
+	if err != nil {
+		return nil, err
+	}
+
+	gw.Close()
+	req, err := http.NewRequest(http.MethodPost, url, &compressed)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Encoding", "gzip")
+	resp, err := http.DefaultClient.Do(req)
+	return resp, err
 }

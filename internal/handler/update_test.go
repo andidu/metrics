@@ -1,195 +1,65 @@
 package handler_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/andidu/metrics/internal/handler"
+	models "github.com/andidu/metrics/internal/model"
 	"github.com/andidu/metrics/internal/router"
 	"github.com/andidu/metrics/internal/service"
 	"github.com/andidu/metrics/internal/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestHandleUpdateGauge(t *testing.T) {
-	ts := httptest.NewServer(router.MetricsRouter(handler.New(service.NewMemStorage())))
+func TestHandler_HandleUpdate(t *testing.T) {
+	memStorage := service.NewMemStorage()
+	ts := httptest.NewServer(router.MetricsRouter(handler.New(memStorage)))
 	defer ts.Close()
 
-	type want struct {
-		contentType string
-		statusCode  int
-		emptyBody   bool
-	}
-	type request struct {
-		url    string
-		method string
-	}
+	var v9 = int64(9)
+	var v901 = 9.01
+
 	tests := []struct {
-		name    string // description of this test case
-		request request
-		want    want
+		m models.Metrics
 	}{
 		{
-			name: "happy path",
-			request: request{
-				url:    "/update/gauge/name/4.001",
-				method: http.MethodPost,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusOK,
-				emptyBody:   true,
+			m: models.Metrics{
+				ID:    "test1",
+				MType: models.Gauge,
+				Value: &v901,
+				Delta: nil,
 			},
 		},
 		{
-			name: "wrong method",
-			request: request{
-				url:    "/update/gauge/name/4.001",
-				method: http.MethodGet,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusMethodNotAllowed,
-				emptyBody:   true,
-			},
-		},
-		{
-			name: "no value",
-			request: request{
-				url:    "/update/gauge/name",
-				method: http.MethodPost,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusNotFound,
-				emptyBody:   false,
-			},
-		},
-		{
-			name: "wrong url",
-			request: request{
-				url:    "/update/gauge/name/name/4.001",
-				method: http.MethodPost,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusNotFound,
-				emptyBody:   false,
-			},
-		},
-		{
-			name: "wrong value",
-			request: request{
-				url:    "/update/gauge/name/4.o01",
-				method: http.MethodPost,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusBadRequest,
-				emptyBody:   true,
+			m: models.Metrics{
+				ID:    "test2",
+				MType: models.Counter,
+				Value: nil,
+				Delta: &v9,
 			},
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resp, get := testutils.TestRequest(t, ts, tt.request.method, tt.request.url)
-			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
-			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
-			if tt.want.emptyBody {
-				assert.Equal(t, "", get)
+		t.Run(tt.m.ID, func(t *testing.T) {
+			body, err := json.Marshal(tt.m)
+			require.NoError(t, err)
+
+			var initialValue = int64(0)
+			if tt.m.MType == models.Counter {
+				initialValue = memStorage.Counters()[tt.m.ID]
 			}
-			resp.Body.Close()
-		})
-	}
-}
 
-func TestHandleUpdateCounter(t *testing.T) {
-	ts := httptest.NewServer(router.MetricsRouter(handler.New(service.NewMemStorage())))
-	defer ts.Close()
-
-	type want struct {
-		contentType string
-		statusCode  int
-		emptyBody   bool
-	}
-	type request struct {
-		url    string
-		method string
-	}
-	tests := []struct {
-		name    string // description of this test case
-		request request
-		want    want
-	}{
-		{
-			name: "happy path",
-			request: request{
-				url:    "/update/counter/name/4",
-				method: http.MethodPost,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusOK,
-				emptyBody:   true,
-			},
-		},
-		{
-			name: "wrong method",
-			request: request{
-				url:    "/update/counter/name/4",
-				method: http.MethodGet,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusMethodNotAllowed,
-				emptyBody:   true,
-			},
-		},
-		{
-			name: "no value",
-			request: request{
-				url:    "/update/counter/name",
-				method: http.MethodPost,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusNotFound,
-				emptyBody:   false,
-			},
-		},
-		{
-			name: "wrong url",
-			request: request{
-				url:    "/update/counter/name/name/4",
-				method: http.MethodPost,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusNotFound,
-				emptyBody:   false,
-			},
-		},
-		{
-			name: "wrong value",
-			request: request{
-				url:    "/update/counter/name/4.o01",
-				method: http.MethodPost,
-			},
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusBadRequest,
-				emptyBody:   true,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resp, get := testutils.TestRequest(t, ts, tt.request.method, tt.request.url)
-			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
-			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
-			if tt.want.emptyBody {
-				assert.Equal(t, "", get)
+			resp, _ := testutils.TestRequestWithBody(t, ts, http.MethodPost, "/update/", bytes.NewReader(body))
+			assert.Equal(t, 200, resp.StatusCode)
+			if tt.m.MType == models.Gauge {
+				assert.Equal(t, *tt.m.Value, memStorage.Gauges()[tt.m.ID])
+			} else {
+				assert.Equal(t, (*(tt.m.Delta))+initialValue, memStorage.Counters()[tt.m.ID])
 			}
 			resp.Body.Close()
 		})
