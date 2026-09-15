@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"flag"
 	"os"
 	"strconv"
@@ -17,8 +16,6 @@ type metrics struct {
 	PollInterval   int
 }
 
-var errNoEnvVariableFound = errors.New("no env variable found")
-
 func ParseConfig() (config, error) {
 	var serverAddress = flag.String("a", "localhost:8080", "Server IP addres")
 	var repeatInterval = flag.Int("r", 10, "Metrics push repeat interval in seconds")
@@ -31,17 +28,21 @@ func ParseConfig() (config, error) {
 		serverAddress = &addressEnv
 	}
 
-	reportIntervalEnv, err := lookupEnvInt("REPORT_INTERVAL")
+	reportIntervalEnv, found, err := lookupEnvInt("REPORT_INTERVAL")
 	if err != nil {
 		return config{}, err
 	}
-	repeatInterval = &reportIntervalEnv
+	if found {
+		repeatInterval = &reportIntervalEnv
+	}
 
-	pollIntervalEnv, err := lookupEnvInt("POLL_INTERVAL")
+	pollIntervalEnv, found, err := lookupEnvInt("POLL_INTERVAL")
 	if err != nil {
 		return config{}, err
 	}
-	pollInterval = &pollIntervalEnv
+	if found {
+		pollInterval = &pollIntervalEnv
+	}
 
 	return config{
 		ServerAddress: *serverAddress,
@@ -52,17 +53,19 @@ func ParseConfig() (config, error) {
 	}, nil
 }
 
-func lookupEnvInt(key string) (int, error) {
+// return the int value, a flag whether it was found
+// and error in case it was found and there was a parsing error
+func lookupEnvInt(key string) (int, bool, error) {
 	str, found := os.LookupEnv(key)
 
 	if !found {
-		return 0, errNoEnvVariableFound
+		return 0, false, nil
 	}
 
 	value, err := strconv.Atoi(str)
 	if err != nil {
-		return 0, err
+		return 0, true, err
 	}
 
-	return value, nil
+	return value, true, nil
 }
