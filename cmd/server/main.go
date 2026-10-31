@@ -42,7 +42,7 @@ func main() {
 		}
 		defer db.Close()
 
-		m, err := runDbMigrations(db)
+		m, err := runDBMigrations(db)
 		if m != nil {
 			defer m.Close()
 		}
@@ -105,7 +105,7 @@ func startPeriodicMemStorageBumps(m handler.MemStorage, interval uint, filename 
 	}()
 }
 
-func runDbMigrations(db *sql.DB) (*migrate.Migrate, error) {
+func runDBMigrations(db *sql.DB) (*migrate.Migrate, error) {
 	driver, err := pgx.WithInstance(db, &pgx.Config{})
 	if err != nil {
 		return nil, err
