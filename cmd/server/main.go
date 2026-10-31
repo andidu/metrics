@@ -26,11 +26,17 @@ func main() {
 		return
 	}
 
-	db, err := sql.Open("pgx", flags.DB.Dsn)
-	if err != nil {
-		panic(err)
+	var db *sql.DB
+	if flags.DB.Dsn == "" {
+		db = nil
+	} else {
+		db, err = sql.Open("pgx", flags.DB.Dsn)
+		if err != nil {
+			utils.Logger.Errorln(err)
+			return
+		}
+		defer db.Close()
 	}
-	defer db.Close()
 	var storage = restoreMemStorageOrCreateNew(flags.Store, db)
 	if storage == nil {
 		return
