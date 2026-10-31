@@ -9,8 +9,10 @@ require (
 	go.uber.org/zap v1.28.0
 )
 
+require github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa // indirect
+
 require (
-	github.com/golang-migrate/migrate/v4 v4.20.1 // indirect
+	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.3 // indirect
