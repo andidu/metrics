@@ -5,9 +5,9 @@ import (
 )
 
 func (h Handler) HandlePing(writer http.ResponseWriter, request *http.Request) {
-	isDbConnected := h.service.storage.Ping()
+	isDBConnected := h.service.storage.Ping()
 
-	if isDbConnected {
+	if isDBConnected {
 		writer.WriteHeader(http.StatusOK)
 	} else {
 		writer.WriteHeader(http.StatusInternalServerError)

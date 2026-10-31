@@ -10,7 +10,7 @@ import (
 type config struct {
 	ServerAddress string
 	Store         Store
-	Db            DbConfig
+	DB            DBConfig
 }
 
 type Store struct {
@@ -19,7 +19,7 @@ type Store struct {
 	Restore         bool
 }
 
-type DbConfig struct {
+type DBConfig struct {
 	Dsn string
 }
 
@@ -73,7 +73,7 @@ func ParseConfig() (config, error) {
 			FileStoragePath: *fileStoragePath,
 			Restore:         *restore,
 		},
-		Db: DbConfig{
+		DB: DBConfig{
 			Dsn: *dbDsn,
 		},
 	}, nil

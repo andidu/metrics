@@ -26,7 +26,7 @@ func main() {
 		return
 	}
 
-	db, err := sql.Open("pgx", flags.Db.Dsn)
+	db, err := sql.Open("pgx", flags.DB.Dsn)
 	if err != nil {
 		panic(err)
 	}
