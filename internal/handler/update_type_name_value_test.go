@@ -13,7 +13,7 @@ import (
 )
 
 func TestHandleUpdateGauge(t *testing.T) {
-	ts := httptest.NewServer(router.MetricsRouter(handler.New(service.NewMemStorage())))
+	ts := httptest.NewServer(router.MetricsRouter(handler.New(service.NewMemStorage(nil))))
 	defer ts.Close()
 
 	type want struct {
@@ -105,7 +105,7 @@ func TestHandleUpdateGauge(t *testing.T) {
 }
 
 func TestHandleUpdateCounter(t *testing.T) {
-	ts := httptest.NewServer(router.MetricsRouter(handler.New(service.NewMemStorage())))
+	ts := httptest.NewServer(router.MetricsRouter(handler.New(service.NewMemStorage(nil))))
 	defer ts.Close()
 
 	type want struct {

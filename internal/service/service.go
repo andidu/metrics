@@ -1,15 +1,17 @@
 package service
 
 import (
+	"database/sql"
 	"sync"
 
 	"github.com/andidu/metrics/internal/handler"
 )
 
-func NewMemStorage() handler.MemStorage {
+func NewMemStorage(db *sql.DB) handler.MemStorage {
 	return &memStorageImpl{
 		counters: make(map[string]int64),
 		gauges:   make(map[string]float64),
+		db:       db,
 	}
 }
 
@@ -17,6 +19,7 @@ type memStorageImpl struct {
 	m        sync.Mutex
 	counters map[string]int64
 	gauges   map[string]float64
+	db       *sql.DB
 }
 
 func (m *memStorageImpl) Gauges() map[string]float64 {
@@ -60,4 +63,8 @@ func (m *memStorageImpl) OverrideCounter(name string, value int64) error {
 	m.counters[name] = value
 	m.m.Unlock()
 	return nil
+}
+
+func (m *memStorageImpl) Ping() bool {
+	return m.db.Ping() == nil
 }

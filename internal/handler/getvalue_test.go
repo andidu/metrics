@@ -14,7 +14,7 @@ import (
 )
 
 func TestHandleGetValueGauge(t *testing.T) {
-	storage := service.NewMemStorage()
+	storage := service.NewMemStorage(nil)
 	ts := httptest.NewServer(router.MetricsRouter(handler.New(storage)))
 	defer ts.Close()
 	storage.OverrideCounter("name", 5)
@@ -107,7 +107,7 @@ func TestHandleGetValueGauge(t *testing.T) {
 }
 
 func TestHandleGetValueCounter(t *testing.T) {
-	storage := service.NewMemStorage()
+	storage := service.NewMemStorage(nil)
 	ts := httptest.NewServer(router.MetricsRouter(handler.New(storage)))
 	defer ts.Close()
 	storage.OverrideCounter("name", 5)

@@ -17,7 +17,7 @@ import (
 )
 
 func TestHandler_HandleUpdate(t *testing.T) {
-	memStorage := service.NewMemStorage()
+	memStorage := service.NewMemStorage(nil)
 	ts := httptest.NewServer(router.MetricsRouter(handler.New(memStorage)))
 	defer ts.Close()
 

@@ -10,12 +10,17 @@ import (
 type config struct {
 	ServerAddress string
 	Store         Store
+	Db            DbConfig
 }
 
 type Store struct {
 	StoreInterval   uint
 	FileStoragePath string
 	Restore         bool
+}
+
+type DbConfig struct {
+	Dsn string
 }
 
 var ErrUnableToParseEnvVariable = errors.New("unable to parse env variable")
@@ -25,6 +30,7 @@ func ParseConfig() (config, error) {
 	var storeInterval = flag.Uint("i", 300, "Interval between metrics disk dumps")
 	var fileStoragePath = flag.String("f", "metrics.txt", "File path to the metrics dump file")
 	var restore = flag.Bool("r", false, "Whether to restore metrics state from fileStoragePath")
+	var dbDsn = flag.String("d", "", "DB connection string")
 
 	flag.Parse()
 
@@ -55,6 +61,10 @@ func ParseConfig() (config, error) {
 			restore = &boolValue
 		}
 	}
+	dbDsnEnv, found := os.LookupEnv("DATABASE_DSN")
+	if found {
+		dbDsn = &dbDsnEnv
+	}
 
 	return config{
 		ServerAddress: *serverAddress,
@@ -62,6 +72,9 @@ func ParseConfig() (config, error) {
 			StoreInterval:   *storeInterval,
 			FileStoragePath: *fileStoragePath,
 			Restore:         *restore,
+		},
+		Db: DbConfig{
+			Dsn: *dbDsn,
 		},
 	}, nil
 }
