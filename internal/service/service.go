@@ -22,10 +22,9 @@ type memStorageImpl struct {
 	db       *sql.DB
 }
 
-func (m *memStorageImpl) Gauges() map[string]float64 {
+func (m *memStorageImpl) Gauges() (map[string]float64, error) {
 	if m.db != nil {
-		g, _ := dbGauges(m.db)
-		return g
+		return dbGauges(m.db)
 	}
 
 	m.m.Lock()
@@ -35,7 +34,7 @@ func (m *memStorageImpl) Gauges() map[string]float64 {
 	for k, v := range m.gauges {
 		gauges[k] = v
 	}
-	return gauges
+	return gauges, nil
 }
 
 func dbGauges(db *sql.DB) (map[string]float64, error) {
@@ -68,10 +67,9 @@ func dbGauges(db *sql.DB) (map[string]float64, error) {
 	return gauges, nil
 }
 
-func (m *memStorageImpl) Counters() map[string]int64 {
+func (m *memStorageImpl) Counters() (map[string]int64, error) {
 	if m.db != nil {
-		c, _ := dbCounters(m.db)
-		return c
+		return dbCounters(m.db)
 	}
 
 	m.m.Lock()
@@ -81,7 +79,7 @@ func (m *memStorageImpl) Counters() map[string]int64 {
 	for k, v := range m.counters {
 		counters[k] = v
 	}
-	return counters
+	return counters, nil
 }
 
 func dbCounters(db *sql.DB) (map[string]int64, error) {

@@ -51,15 +51,24 @@ func TestHandler_HandleUpdate(t *testing.T) {
 
 			var initialValue = int64(0)
 			if tt.m.MType == models.Counter {
-				initialValue = memStorage.Counters()[tt.m.ID]
+				counters, err := memStorage.Counters()
+				assert.NoError(t, err)
+
+				initialValue = counters[tt.m.ID]
 			}
 
 			resp, _ := testutils.TestRequestWithBody(t, ts, http.MethodPost, "/update/", bytes.NewReader(body))
 			assert.Equal(t, 200, resp.StatusCode)
 			if tt.m.MType == models.Gauge {
-				assert.Equal(t, *tt.m.Value, memStorage.Gauges()[tt.m.ID])
+				gauges, err := memStorage.Gauges()
+				assert.NoError(t, err)
+
+				assert.Equal(t, *tt.m.Value, gauges[tt.m.ID])
 			} else {
-				assert.Equal(t, (*(tt.m.Delta))+initialValue, memStorage.Counters()[tt.m.ID])
+				counters, err := memStorage.Counters()
+				assert.NoError(t, err)
+
+				assert.Equal(t, (*(tt.m.Delta))+initialValue, counters[tt.m.ID])
 			}
 			resp.Body.Close()
 		})
