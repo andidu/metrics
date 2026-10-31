@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"time"
 
@@ -14,6 +15,10 @@ import (
 	"github.com/andidu/metrics/internal/utils"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/pgx/v5"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
@@ -26,11 +31,26 @@ func main() {
 		return
 	}
 
-	db, err := sql.Open("pgx", flags.DB.Dsn)
-	if err != nil {
-		panic(err)
+	var db *sql.DB
+	if flags.DB.Dsn == "" {
+		db = nil
+	} else {
+		db, err = sql.Open("pgx", flags.DB.Dsn)
+		if err != nil {
+			utils.Logger.Errorln(err)
+			return
+		}
+		defer db.Close()
+
+		m, err := runDBMigrations(db)
+		if m != nil {
+			defer m.Close()
+		}
+		if err != nil {
+			utils.Logger.Errorln(err)
+			return
+		}
 	}
-	defer db.Close()
 	var storage = restoreMemStorageOrCreateNew(flags.Store, db)
 	if storage == nil {
 		return
@@ -83,4 +103,26 @@ func startPeriodicMemStorageBumps(m handler.MemStorage, interval uint, filename 
 			}
 		}
 	}()
+}
+
+func runDBMigrations(db *sql.DB) (*migrate.Migrate, error) {
+	driver, err := pgx.WithInstance(db, &pgx.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://migrations",
+		"pgx5",
+		driver,
+	)
+	if err != nil {
+		return m, err
+	}
+
+	err = m.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return m, err
+	}
+	return m, nil
 }

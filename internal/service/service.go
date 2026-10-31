@@ -22,7 +22,11 @@ type memStorageImpl struct {
 	db       *sql.DB
 }
 
-func (m *memStorageImpl) Gauges() map[string]float64 {
+func (m *memStorageImpl) Gauges() (map[string]float64, error) {
+	if m.db != nil {
+		return dbGauges(m.db)
+	}
+
 	m.m.Lock()
 	defer m.m.Unlock()
 
@@ -30,10 +34,44 @@ func (m *memStorageImpl) Gauges() map[string]float64 {
 	for k, v := range m.gauges {
 		gauges[k] = v
 	}
-	return gauges
+	return gauges, nil
 }
 
-func (m *memStorageImpl) Counters() map[string]int64 {
+func dbGauges(db *sql.DB) (map[string]float64, error) {
+	rows, err := db.Query(
+		"SELECT name, fvalue FROM metrics WHERE fvalue IS NOT NULL",
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	gauges := make(map[string]float64)
+
+	for rows.Next() {
+		var name string
+		var value float64
+
+		err := rows.Scan(&name, &value)
+		if err != nil {
+			return nil, err
+		}
+
+		gauges[name] = value
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return gauges, nil
+}
+
+func (m *memStorageImpl) Counters() (map[string]int64, error) {
+	if m.db != nil {
+		return dbCounters(m.db)
+	}
+
 	m.m.Lock()
 	defer m.m.Unlock()
 
@@ -41,10 +79,46 @@ func (m *memStorageImpl) Counters() map[string]int64 {
 	for k, v := range m.counters {
 		counters[k] = v
 	}
-	return counters
+	return counters, nil
+}
+
+func dbCounters(db *sql.DB) (map[string]int64, error) {
+	rows, err := db.Query(
+		"SELECT name, ivalue FROM metrics WHERE ivalue IS NOT NULL",
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counters := make(map[string]int64)
+
+	for rows.Next() {
+		var name string
+		var value int64
+
+		err := rows.Scan(&name, &value)
+		if err != nil {
+			return nil, err
+		}
+
+		counters[name] = value
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return counters, nil
 }
 
 func (m *memStorageImpl) UpdateGauge(name string, value float64) error {
+	if m.db != nil {
+		_, err := m.db.Exec("INSERT INTO metrics (name, fvalue) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET fvalue = EXCLUDED.fvalue;",
+			name, value)
+		return err
+	}
+
 	m.m.Lock()
 	m.gauges[name] = value
 	m.m.Unlock()
@@ -52,6 +126,12 @@ func (m *memStorageImpl) UpdateGauge(name string, value float64) error {
 }
 
 func (m *memStorageImpl) UpdateCounter(name string, value int64) error {
+	if m.db != nil {
+		_, err := m.db.Exec("INSERT INTO metrics (name, ivalue) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET ivalue = COALESCE(metrics.ivalue, 0) + EXCLUDED.ivalue;",
+			name, value)
+		return err
+	}
+
 	m.m.Lock()
 	m.counters[name] += value
 	m.m.Unlock()
@@ -59,6 +139,12 @@ func (m *memStorageImpl) UpdateCounter(name string, value int64) error {
 }
 
 func (m *memStorageImpl) OverrideCounter(name string, value int64) error {
+	if m.db != nil {
+		_, err := m.db.Exec("INSERT INTO metrics (name, ivalue) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET ivalue = EXCLUDED.ivalue;",
+			name, value)
+		return err
+	}
+
 	m.m.Lock()
 	m.counters[name] = value
 	m.m.Unlock()
@@ -66,5 +152,8 @@ func (m *memStorageImpl) OverrideCounter(name string, value int64) error {
 }
 
 func (m *memStorageImpl) Ping() bool {
-	return m.db.Ping() == nil
+	if m.db != nil {
+		return m.db.Ping() == nil
+	}
+	return false
 }

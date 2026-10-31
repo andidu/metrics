@@ -18,11 +18,11 @@ var ErrUnknownMetricType = errors.New("unknown metric type")
 var ErrWrongMetricValue = errors.New("wrong metric value")
 var ErrInternalStorage = errors.New("internal storage error")
 
-func (s Service) Gauges() map[string]float64 {
+func (s Service) Gauges() (map[string]float64, error) {
 	return s.storage.Gauges()
 }
 
-func (s Service) Counters() map[string]int64 {
+func (s Service) Counters() (map[string]int64, error) {
 	return s.storage.Counters()
 }
 
@@ -94,7 +94,11 @@ func (s Service) UpdateMetrics(m models.Metrics) error {
 }
 
 func (s Service) GetGauge(name string) (string, error) {
-	fval, ok := s.storage.Gauges()[name]
+	gauges, err := s.storage.Gauges()
+	if err != nil {
+		return "", err
+	}
+	fval, ok := gauges[name]
 	if ok {
 		s := strconv.FormatFloat(fval, 'f', 3, 64)
 		s = strings.TrimRight(s, "0")
@@ -104,7 +108,11 @@ func (s Service) GetGauge(name string) (string, error) {
 	return "", ErrNoElement
 }
 func (s Service) GetCounter(name string) (string, error) {
-	ival, ok := s.storage.Counters()[name]
+	counters, err := s.storage.Counters()
+	if err != nil {
+		return "", err
+	}
+	ival, ok := counters[name]
 	if ok {
 		return strconv.FormatInt(ival, 10), nil
 	}
@@ -119,7 +127,12 @@ func (s Service) RetreiveMetrics(m *models.Metrics) error {
 	}
 
 	if t == "gauge" {
-		fval, ok := s.storage.Gauges()[m.ID]
+		gauges, err := s.storage.Gauges()
+		if err != nil {
+			return err
+		}
+
+		fval, ok := gauges[m.ID]
 		if ok {
 			m.Value = &fval
 			return nil
@@ -127,7 +140,12 @@ func (s Service) RetreiveMetrics(m *models.Metrics) error {
 			return ErrNoElement
 		}
 	} else {
-		ival, ok := s.storage.Counters()[m.ID]
+		counters, err := s.storage.Counters()
+		if err != nil {
+			return err
+		}
+
+		ival, ok := counters[m.ID]
 		if ok {
 			m.Delta = &ival
 			return nil
