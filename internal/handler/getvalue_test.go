@@ -17,8 +17,8 @@ func TestHandleGetValueGauge(t *testing.T) {
 	storage := service.NewMemStorage()
 	ts := httptest.NewServer(router.MetricsRouter(handler.New(storage)))
 	defer ts.Close()
-	storage.Counters()["name"] = 5
-	storage.Gauges()["name1"] = 9.011
+	storage.OverrideCounter("name", 5)
+	storage.UpdateGauge("name1", 9.011)
 
 	type want struct {
 		contentType string
@@ -110,8 +110,8 @@ func TestHandleGetValueCounter(t *testing.T) {
 	storage := service.NewMemStorage()
 	ts := httptest.NewServer(router.MetricsRouter(handler.New(storage)))
 	defer ts.Close()
-	storage.Counters()["name"] = 5
-	storage.Gauges()["name1"] = 9.011
+	storage.OverrideCounter("name", 5)
+	storage.UpdateGauge("name1", 9.011)
 
 	type want struct {
 		contentType string

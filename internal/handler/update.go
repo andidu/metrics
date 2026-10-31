@@ -1,34 +1,29 @@
 package handler
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
+	models "github.com/andidu/metrics/internal/model"
 )
 
 func (h Handler) HandleUpdate(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodPost {
-		writer.WriteHeader(http.StatusMethodNotAllowed)
+	var metrics models.Metrics
+	var buf bytes.Buffer
+
+	_, err := buf.ReadFrom(request.Body)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	t := chi.URLParam(request, "type")
-	name := chi.URLParam(request, "name")
-	strvalue := chi.URLParam(request, "value")
-
-	err := h.service.UpdateMetric(t, name, strvalue)
-	switch err {
-	case ErrUnknownMetricType:
-		writer.WriteHeader(http.StatusBadRequest)
-		return
-	case ErrWrongMetricValue:
-		writer.WriteHeader(http.StatusBadRequest)
-		return
-	case ErrInternalStorage:
-		writer.WriteHeader(http.StatusInternalServerError)
-		writer.Write([]byte(http.StatusText(http.StatusInternalServerError)))
+	err = json.Unmarshal(buf.Bytes(), &metrics)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	writer.WriteHeader(http.StatusOK)
+	err = h.service.UpdateMetrics(metrics)
+	createUpdateResponse(err, writer)
 }

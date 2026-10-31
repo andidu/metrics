@@ -14,7 +14,16 @@ func TestRequest(
 	ts *httptest.Server,
 	method, path string,
 ) (*http.Response, string) {
-	req, err := http.NewRequest(method, ts.URL+path, nil)
+	return TestRequestWithBody(t, ts, method, path, nil)
+}
+
+func TestRequestWithBody(
+	t *testing.T,
+	ts *httptest.Server,
+	method, path string,
+	body io.Reader,
+) (*http.Response, string) {
+	req, err := http.NewRequest(method, ts.URL+path, body)
 	require.NoError(t, err)
 
 	resp, err := ts.Client().Do(req)
