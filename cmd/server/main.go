@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/andidu/metrics/internal/router"
 	"github.com/andidu/metrics/internal/service"
 	"github.com/andidu/metrics/internal/utils"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
@@ -23,7 +26,12 @@ func main() {
 		return
 	}
 
-	var storage = restoreMemStorageOrCreateNew(flags.Store)
+	db, err := sql.Open("pgx", flags.DB.Dsn)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	var storage = restoreMemStorageOrCreateNew(flags.Store, db)
 	if storage == nil {
 		return
 	}
@@ -50,9 +58,9 @@ func main() {
 }
 
 // returns MemStorage or nil on error
-func restoreMemStorageOrCreateNew(storeFlags config.Store) handler.MemStorage {
+func restoreMemStorageOrCreateNew(storeFlags config.Store, db *sql.DB) handler.MemStorage {
 	if storeFlags.Restore {
-		storage, err := mfiles.Restore(storeFlags.FileStoragePath)
+		storage, err := mfiles.Restore(storeFlags.FileStoragePath, db)
 		if err != nil {
 			utils.Logger.Errorln("Unable to restore storage state", err)
 			return nil
@@ -60,7 +68,7 @@ func restoreMemStorageOrCreateNew(storeFlags config.Store) handler.MemStorage {
 			return storage
 		}
 	} else {
-		return service.NewMemStorage()
+		return service.NewMemStorage(db)
 	}
 }
 
