@@ -3,6 +3,7 @@ package handler
 type MemStorage interface {
 	Gauges() (map[string]float64, error)
 	Counters() (map[string]int64, error)
+	UpdateMetrics(gauges map[string]float64, counters map[string]int64) error
 	UpdateGauge(name string, value float64) error
 	UpdateCounter(name string, value int64) error
 	OverrideCounter(name string, value int64) error

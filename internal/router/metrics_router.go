@@ -12,6 +12,7 @@ func MetricsRouter(handler handler.Handler) *chi.Mux {
 	r.Get("/value/{type}/{name}", handler.HandleGet)
 	r.Post("/value/", handler.Value)
 	r.Post("/update/", handler.HandleUpdate)
+	r.Post("/updates/", handler.HandleUpdates)
 	r.HandleFunc("/update/{type}/{name}/{value}", handler.HandleUpdateTypeNameValue)
 	r.Get("/ping", handler.HandlePing)
 	r.HandleFunc("/", handler.HandleDefault)

@@ -93,6 +93,30 @@ func (s Service) UpdateMetrics(m models.Metrics) error {
 	}
 }
 
+func (s Service) UpdateMetricsBatch(ms []models.Metrics) error {
+	gauge := make(map[string]float64)
+	counters := make(map[string]int64)
+
+	for _, m := range ms {
+		if m.MType != "gauge" && m.MType != "counter" {
+			return ErrUnknownMetricType
+		}
+		if m.MType == "gauge" {
+			if m.Value == nil {
+				return ErrWrongMetricValue
+			}
+			gauge[m.ID] = *m.Value
+		} else {
+			if m.Delta == nil {
+				return ErrWrongMetricValue
+			}
+			counters[m.ID] += *m.Delta
+		}
+	}
+
+	return s.storage.UpdateMetrics(gauge, counters)
+}
+
 func (s Service) GetGauge(name string) (string, error) {
 	gauges, err := s.storage.Gauges()
 	if err != nil {

@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"errors"
 	"sync"
 
 	"github.com/andidu/metrics/internal/handler"
@@ -21,6 +22,8 @@ type memStorageImpl struct {
 	gauges   map[string]float64
 	db       *sql.DB
 }
+
+var errWrongInputParam = errors.New("wrong input params")
 
 func (m *memStorageImpl) Gauges() (map[string]float64, error) {
 	if m.db != nil {
@@ -114,8 +117,8 @@ func dbCounters(db *sql.DB) (map[string]int64, error) {
 
 func (m *memStorageImpl) UpdateGauge(name string, value float64) error {
 	if m.db != nil {
-		_, err := m.db.Exec("INSERT INTO metrics (name, fvalue) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET fvalue = EXCLUDED.fvalue;",
-			name, value)
+		_, err := m.db.Exec(`INSERT INTO metrics (name, fvalue) VALUES ($1, $2) 
+		ON CONFLICT (name) DO UPDATE SET fvalue = EXCLUDED.fvalue;`, name, value)
 		return err
 	}
 
@@ -127,8 +130,8 @@ func (m *memStorageImpl) UpdateGauge(name string, value float64) error {
 
 func (m *memStorageImpl) UpdateCounter(name string, value int64) error {
 	if m.db != nil {
-		_, err := m.db.Exec("INSERT INTO metrics (name, ivalue) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET ivalue = COALESCE(metrics.ivalue, 0) + EXCLUDED.ivalue;",
-			name, value)
+		_, err := m.db.Exec(`INSERT INTO metrics (name, ivalue) VALUES ($1, $2)
+		ON CONFLICT (name) DO UPDATE SET ivalue = COALESCE(metrics.ivalue, 0) + EXCLUDED.ivalue;`, name, value)
 		return err
 	}
 
@@ -140,8 +143,8 @@ func (m *memStorageImpl) UpdateCounter(name string, value int64) error {
 
 func (m *memStorageImpl) OverrideCounter(name string, value int64) error {
 	if m.db != nil {
-		_, err := m.db.Exec("INSERT INTO metrics (name, ivalue) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET ivalue = EXCLUDED.ivalue;",
-			name, value)
+		_, err := m.db.Exec(`INSERT INTO metrics (name, ivalue) VALUES ($1, $2) 
+		ON CONFLICT (name) DO UPDATE SET ivalue = EXCLUDED.ivalue;`, name, value)
 		return err
 	}
 
@@ -156,4 +159,47 @@ func (m *memStorageImpl) Ping() bool {
 		return m.db.Ping() == nil
 	}
 	return false
+}
+
+func (m *memStorageImpl) UpdateMetrics(gauges map[string]float64, counters map[string]int64) error {
+	if m.db != nil {
+		return dbUpdateMetrics(m.db, gauges, counters)
+	}
+
+	m.m.Lock()
+	defer m.m.Unlock()
+	for name, value := range counters {
+		m.counters[name] += value
+	}
+	for name, value := range gauges {
+		m.gauges[name] = value
+	}
+	return nil
+}
+
+func dbUpdateMetrics(db *sql.DB, gauges map[string]float64, counters map[string]int64) error {
+	tx, err := db.Begin()
+
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for name, value := range gauges {
+		_, err = tx.Exec(`INSERT INTO metrics (name, fvalue) VALUES ($1, $2) 
+		ON CONFLICT (name) DO UPDATE SET fvalue = EXCLUDED.fvalue`, name, value)
+		if err != nil {
+			return err
+		}
+	}
+
+	for name, value := range counters {
+		_, err = tx.Exec(`INSERT INTO metrics (name, ivalue) VALUES ($1, $2)
+        ON CONFLICT (name) DO UPDATE SET ivalue = COALESCE(metrics.ivalue, 0) + EXCLUDED.ivalue`, name, value)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
