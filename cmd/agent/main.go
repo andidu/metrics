@@ -4,15 +4,18 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/andidu/metrics/internal/agent"
 	config "github.com/andidu/metrics/internal/config/agent"
 	models "github.com/andidu/metrics/internal/model"
+	"github.com/andidu/metrics/internal/utils"
 )
 
 func main() {
@@ -55,7 +58,14 @@ func main() {
 			continue
 		}
 
-		resp, err := sendMetricsBatch(URLTemplate, metrics.Counters, metrics.Gauges)
+		resp, err := utils.TryValue(
+			func() (*http.Response, error) {
+				return sendMetricsBatch(URLTemplate, metrics.Counters, metrics.Gauges)
+			},
+			func(err error) bool {
+				return errors.Is(err, syscall.ECONNREFUSED)
+			},
+		)
 		if err != nil {
 			log.Println(err.Error())
 		} else {

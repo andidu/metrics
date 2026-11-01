@@ -6,6 +6,9 @@ import (
 	"sync"
 
 	"github.com/andidu/metrics/internal/handler"
+	"github.com/andidu/metrics/internal/utils"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func NewMemStorage(db *sql.DB) handler.MemStorage {
@@ -27,7 +30,11 @@ var errWrongInputParam = errors.New("wrong input params")
 
 func (m *memStorageImpl) Gauges() (map[string]float64, error) {
 	if m.db != nil {
-		return dbGauges(m.db)
+		return tryRunDBOperationWithValue(
+			func() (map[string]float64, error) {
+				return dbGauges(m.db)
+			},
+		)
 	}
 
 	m.m.Lock()
@@ -72,7 +79,11 @@ func dbGauges(db *sql.DB) (map[string]float64, error) {
 
 func (m *memStorageImpl) Counters() (map[string]int64, error) {
 	if m.db != nil {
-		return dbCounters(m.db)
+		return tryRunDBOperationWithValue(
+			func() (map[string]int64, error) {
+				return dbCounters(m.db)
+			},
+		)
 	}
 
 	m.m.Lock()
@@ -117,9 +128,13 @@ func dbCounters(db *sql.DB) (map[string]int64, error) {
 
 func (m *memStorageImpl) UpdateGauge(name string, value float64) error {
 	if m.db != nil {
-		_, err := m.db.Exec(`INSERT INTO metrics (name, fvalue) VALUES ($1, $2) 
+		return tryRunDBOperation(
+			func() error {
+				_, err := m.db.Exec(`INSERT INTO metrics (name, fvalue) VALUES ($1, $2) 
 		ON CONFLICT (name) DO UPDATE SET fvalue = EXCLUDED.fvalue;`, name, value)
-		return err
+				return err
+			},
+		)
 	}
 
 	m.m.Lock()
@@ -130,9 +145,13 @@ func (m *memStorageImpl) UpdateGauge(name string, value float64) error {
 
 func (m *memStorageImpl) UpdateCounter(name string, value int64) error {
 	if m.db != nil {
-		_, err := m.db.Exec(`INSERT INTO metrics (name, ivalue) VALUES ($1, $2)
+		return tryRunDBOperation(
+			func() error {
+				_, err := m.db.Exec(`INSERT INTO metrics (name, ivalue) VALUES ($1, $2)
 		ON CONFLICT (name) DO UPDATE SET ivalue = COALESCE(metrics.ivalue, 0) + EXCLUDED.ivalue;`, name, value)
-		return err
+				return err
+			},
+		)
 	}
 
 	m.m.Lock()
@@ -143,9 +162,13 @@ func (m *memStorageImpl) UpdateCounter(name string, value int64) error {
 
 func (m *memStorageImpl) OverrideCounter(name string, value int64) error {
 	if m.db != nil {
-		_, err := m.db.Exec(`INSERT INTO metrics (name, ivalue) VALUES ($1, $2) 
+		return tryRunDBOperation(
+			func() error {
+				_, err := m.db.Exec(`INSERT INTO metrics (name, ivalue) VALUES ($1, $2) 
 		ON CONFLICT (name) DO UPDATE SET ivalue = EXCLUDED.ivalue;`, name, value)
-		return err
+				return err
+			},
+		)
 	}
 
 	m.m.Lock()
@@ -163,7 +186,11 @@ func (m *memStorageImpl) Ping() bool {
 
 func (m *memStorageImpl) UpdateMetrics(gauges map[string]float64, counters map[string]int64) error {
 	if m.db != nil {
-		return dbUpdateMetrics(m.db, gauges, counters)
+		return tryRunDBOperation(
+			func() error {
+				return dbUpdateMetrics(m.db, gauges, counters)
+			},
+		)
 	}
 
 	m.m.Lock()
@@ -202,4 +229,24 @@ func dbUpdateMetrics(db *sql.DB, gauges map[string]float64, counters map[string]
 	}
 
 	return tx.Commit()
+}
+
+func tryRunDBOperation(operation func() error) error {
+	_, err := tryRunDBOperationWithValue(
+		func() (struct{}, error) {
+			return struct{}{}, operation()
+		},
+	)
+	return err
+}
+
+func tryRunDBOperationWithValue[T any](operation func() (T, error)) (T, error) {
+	return utils.TryValue(
+		operation,
+		func(err error) bool {
+			var pgErr *pgconn.PgError
+
+			return errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code)
+		},
+	)
 }
