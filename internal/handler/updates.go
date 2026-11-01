@@ -9,7 +9,7 @@ import (
 )
 
 func (h Handler) HandleUpdates(writer http.ResponseWriter, request *http.Request) {
-	var metrics []models.Metrics = make([]models.Metrics, 0)
+	var metrics = make([]models.Metrics, 0)
 	var buf bytes.Buffer
 
 	_, err := buf.ReadFrom(request.Body)

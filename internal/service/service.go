@@ -23,7 +23,7 @@ type memStorageImpl struct {
 	db       *sql.DB
 }
 
-var errWrongInputParam = errors.New("Wrong input params")
+var errWrongInputParam = errors.New("wrong input params")
 
 func (m *memStorageImpl) Gauges() (map[string]float64, error) {
 	if m.db != nil {
