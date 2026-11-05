@@ -1,5 +1,5 @@
 CREATE TABLE metrics (
-    name TEXT PRIMARY KEY,
-    ivalue BIGINT,
-    fvalue DOUBLE PRECISION
+    name VARCHAR(64) PRIMARY KEY,
+    ivalue BIGINT NULL,
+    fvalue DOUBLE PRECISION NULL
 );
