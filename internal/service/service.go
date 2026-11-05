@@ -221,17 +221,43 @@ func dbUpdateMetrics(db *sql.DB, gauges map[string]float64, counters map[string]
 	}
 	defer tx.Rollback()
 
-	for name, value := range gauges {
-		_, err = tx.ExecContext(context.TODO(), `INSERT INTO metrics (name, fvalue) VALUES ($1, $2) 
-		ON CONFLICT (name) DO UPDATE SET fvalue = EXCLUDED.fvalue`, name, value)
+	if len(gauges) > 0 {
+		names := make([]string, 0, len(gauges))
+		values := make([]float64, 0, len(gauges))
+		for name, value := range gauges {
+			names = append(names, name)
+			values = append(values, value)
+		}
+
+		_, err = tx.ExecContext(context.TODO(), `
+			INSERT INTO metrics (name, fvalue)
+			SELECT name, value
+			FROM unnest($1::text[], $2::float8[]) AS batch(name, value)
+			ORDER BY name
+			ON CONFLICT (name)
+			DO UPDATE SET fvalue = EXCLUDED.fvalue
+		`, names, values)
 		if err != nil {
 			return err
 		}
 	}
 
-	for name, value := range counters {
-		_, err = tx.ExecContext(context.TODO(), `INSERT INTO metrics (name, ivalue) VALUES ($1, $2)
-        ON CONFLICT (name) DO UPDATE SET ivalue = COALESCE(metrics.ivalue, 0) + EXCLUDED.ivalue`, name, value)
+	if len(counters) > 0 {
+		names := make([]string, 0, len(counters))
+		values := make([]int64, 0, len(counters))
+		for name, value := range counters {
+			names = append(names, name)
+			values = append(values, value)
+		}
+
+		_, err = tx.ExecContext(context.TODO(), `
+			INSERT INTO metrics (name, ivalue)
+			SELECT name, value
+			FROM unnest($1::text[], $2::bigint[]) AS batch(name, value)
+			ORDER BY name
+			ON CONFLICT (name)
+			DO UPDATE SET ivalue = COALESCE(metrics.ivalue, 0) + EXCLUDED.ivalue
+		`, names, values)
 		if err != nil {
 			return err
 		}
