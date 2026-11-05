@@ -124,32 +124,3 @@ func sendMetricsBatch(url string, counters map[string]int64, gauges map[string]f
 	resp, err := http.DefaultClient.Do(req)
 	return resp, err
 }
-
-func sendMetrics(url string, m models.Metrics) (*http.Response, error) {
-	body, err := json.Marshal(m)
-	if err != nil {
-		return nil, err
-	}
-
-	var compressed bytes.Buffer
-	gw, err := gzip.NewWriterLevel(&compressed, gzip.BestCompression)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = gw.Write(body)
-	if err != nil {
-		return nil, err
-	}
-
-	gw.Close()
-	req, err := http.NewRequest(http.MethodPost, url, &compressed)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Encoding", "gzip")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept-Encoding", "gzip")
-	resp, err := http.DefaultClient.Do(req)
-	return resp, err
-}
