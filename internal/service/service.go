@@ -190,7 +190,7 @@ func (m *memStorageImpl) Ping() bool {
 	if m.db != nil {
 		return m.db.Ping() == nil
 	}
-	return false
+	return true
 }
 
 func (m *memStorageImpl) UpdateMetrics(gauges map[string]float64, counters map[string]int64) error {
