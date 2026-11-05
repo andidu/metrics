@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/andidu/metrics/internal/agent"
@@ -58,14 +56,7 @@ func main() {
 			continue
 		}
 
-		resp, err := utils.TryValue(
-			func() (*http.Response, error) {
-				return sendMetricsBatch(URLTemplate, metrics.Counters, metrics.Gauges)
-			},
-			func(err error) bool {
-				return errors.Is(err, syscall.ECONNREFUSED)
-			},
-		)
+		resp, err := sendMetricsBatch(URLTemplate, metrics.Counters, metrics.Gauges)
 		if err != nil {
 			log.Println(err.Error())
 		} else {
@@ -121,6 +112,6 @@ func sendMetricsBatch(url string, counters map[string]int64, gauges map[string]f
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := utils.NewRetryingClient().Do(req)
 	return resp, err
 }
