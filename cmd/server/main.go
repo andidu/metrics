@@ -15,8 +15,6 @@ import (
 	"github.com/andidu/metrics/internal/utils"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {

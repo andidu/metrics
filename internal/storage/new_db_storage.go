@@ -5,8 +5,10 @@ import (
 	"errors"
 
 	"github.com/andidu/metrics/internal/utils"
+	"github.com/andidu/metrics/migrations"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/pgx/v5"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
 type DBStorage struct {
@@ -44,8 +46,14 @@ func runDBMigrations(db *sql.DB) (*migrate.Migrate, error) {
 		return nil, err
 	}
 
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations",
+	source, err := iofs.New(migrations.Files, ".")
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := migrate.NewWithInstance(
+		"iofs",
+		source,
 		"pgx5",
 		driver,
 	)
