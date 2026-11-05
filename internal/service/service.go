@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"sync"
@@ -48,7 +49,8 @@ func (m *memStorageImpl) Gauges() (map[string]float64, error) {
 }
 
 func dbGauges(db *sql.DB) (map[string]float64, error) {
-	rows, err := db.Query(
+	rows, err := db.QueryContext(
+		context.TODO(),
 		"SELECT name, fvalue FROM metrics WHERE fvalue IS NOT NULL",
 	)
 	if err != nil {
@@ -97,7 +99,8 @@ func (m *memStorageImpl) Counters() (map[string]int64, error) {
 }
 
 func dbCounters(db *sql.DB) (map[string]int64, error) {
-	rows, err := db.Query(
+	rows, err := db.QueryContext(
+		context.TODO(),
 		"SELECT name, ivalue FROM metrics WHERE ivalue IS NOT NULL",
 	)
 	if err != nil {
@@ -130,7 +133,9 @@ func (m *memStorageImpl) UpdateGauge(name string, value float64) error {
 	if m.db != nil {
 		return tryRunDBOperation(
 			func() error {
-				_, err := m.db.Exec(`INSERT INTO metrics (name, fvalue) VALUES ($1, $2) 
+				_, err := m.db.ExecContext(
+					context.TODO(),
+					`INSERT INTO metrics (name, fvalue) VALUES ($1, $2) 
 		ON CONFLICT (name) DO UPDATE SET fvalue = EXCLUDED.fvalue;`, name, value)
 				return err
 			},
@@ -147,7 +152,9 @@ func (m *memStorageImpl) UpdateCounter(name string, value int64) error {
 	if m.db != nil {
 		return tryRunDBOperation(
 			func() error {
-				_, err := m.db.Exec(`INSERT INTO metrics (name, ivalue) VALUES ($1, $2)
+				_, err := m.db.ExecContext(
+					context.TODO(),
+					`INSERT INTO metrics (name, ivalue) VALUES ($1, $2)
 		ON CONFLICT (name) DO UPDATE SET ivalue = COALESCE(metrics.ivalue, 0) + EXCLUDED.ivalue;`, name, value)
 				return err
 			},
@@ -164,7 +171,9 @@ func (m *memStorageImpl) OverrideCounter(name string, value int64) error {
 	if m.db != nil {
 		return tryRunDBOperation(
 			func() error {
-				_, err := m.db.Exec(`INSERT INTO metrics (name, ivalue) VALUES ($1, $2) 
+				_, err := m.db.ExecContext(
+					context.TODO(),
+					`INSERT INTO metrics (name, ivalue) VALUES ($1, $2) 
 		ON CONFLICT (name) DO UPDATE SET ivalue = EXCLUDED.ivalue;`, name, value)
 				return err
 			},
@@ -213,7 +222,7 @@ func dbUpdateMetrics(db *sql.DB, gauges map[string]float64, counters map[string]
 	defer tx.Rollback()
 
 	for name, value := range gauges {
-		_, err = tx.Exec(`INSERT INTO metrics (name, fvalue) VALUES ($1, $2) 
+		_, err = tx.ExecContext(context.TODO(), `INSERT INTO metrics (name, fvalue) VALUES ($1, $2) 
 		ON CONFLICT (name) DO UPDATE SET fvalue = EXCLUDED.fvalue`, name, value)
 		if err != nil {
 			return err
@@ -221,7 +230,7 @@ func dbUpdateMetrics(db *sql.DB, gauges map[string]float64, counters map[string]
 	}
 
 	for name, value := range counters {
-		_, err = tx.Exec(`INSERT INTO metrics (name, ivalue) VALUES ($1, $2)
+		_, err = tx.ExecContext(context.TODO(), `INSERT INTO metrics (name, ivalue) VALUES ($1, $2)
         ON CONFLICT (name) DO UPDATE SET ivalue = COALESCE(metrics.ivalue, 0) + EXCLUDED.ivalue`, name, value)
 		if err != nil {
 			return err
