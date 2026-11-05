@@ -255,7 +255,8 @@ func tryRunDBOperationWithValue[T any](operation func() (T, error)) (T, error) {
 		func(err error) bool {
 			var pgErr *pgconn.PgError
 
-			return errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code)
+			return errors.As(err, &pgErr) && (pgerrcode.IsConnectionException(pgErr.Code) ||
+				pgerrcode.IsTransactionRollback(pgErr.Code))
 		},
 	)
 }
