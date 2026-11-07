@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/andidu/metrics/internal/utils"
 	"github.com/andidu/metrics/migrations"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/pgx/v5"
@@ -33,7 +32,6 @@ func NewDBStorage(dsn string) (DBStorage, error) {
 
 	m, err := runDBMigrations(db)
 	if err != nil {
-		utils.Logger.Errorln(err)
 		return DBStorage{db, m}, err
 	}
 
