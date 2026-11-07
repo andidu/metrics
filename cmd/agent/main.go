@@ -13,6 +13,7 @@ import (
 	"github.com/andidu/metrics/internal/agent"
 	config "github.com/andidu/metrics/internal/config/agent"
 	models "github.com/andidu/metrics/internal/model"
+	"github.com/andidu/metrics/internal/utils"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func main() {
 		return
 	}
 
-	var URLTemplate = fmt.Sprintf("http://%s/update/", flags.ServerAddress)
+	var URLTemplate = fmt.Sprintf("http://%s/updates/", flags.ServerAddress)
 
 	var mutex sync.Mutex // user for guarding sample, counter and sentCounter
 	var sample agent.MetricsSample
@@ -50,42 +51,43 @@ func main() {
 		mutex.Lock()
 		metrics := sample
 		mutex.Unlock()
-		for name, value := range metrics.Counters {
-			var m = models.Metrics{
-				ID:    name,
-				MType: models.Counter,
-				Delta: &value,
-			}
 
-			resp, err := sendMetrics(URLTemplate, m)
-			if err != nil {
-				log.Println(err.Error())
-			} else {
-				mutex.Lock()
-				counter -= value
-				metrics.InvalidateCounter(name)
-				mutex.Unlock()
-				resp.Body.Close()
-			}
+		if len(metrics.Counters) == 0 && len(metrics.Gauges) == 0 {
+			continue
 		}
 
-		for name, value := range metrics.Gauges {
-			var m = models.Metrics{
-				ID:    name,
-				MType: models.Gauge,
-				Value: &value,
+		resp, err := sendMetricsBatch(URLTemplate, metrics.Counters, metrics.Gauges)
+		if err != nil {
+			log.Println(err.Error())
+		} else {
+			mutex.Lock()
+			for name, value := range metrics.Counters {
+				counter -= value
+				metrics.InvalidateCounter(name)
 			}
-			resp, err := sendMetrics(URLTemplate, m)
-			if err != nil {
-				log.Println(err.Error())
-			} else {
-				resp.Body.Close()
-			}
+			mutex.Unlock()
+			resp.Body.Close()
 		}
 	}
 }
 
-func sendMetrics(url string, m models.Metrics) (*http.Response, error) {
+func sendMetricsBatch(url string, counters map[string]int64, gauges map[string]float64) (*http.Response, error) {
+	m := make([]models.Metrics, 0)
+	for name, value := range counters {
+		m = append(m, models.Metrics{
+			ID:    name,
+			MType: models.Counter,
+			Delta: &value,
+		})
+	}
+	for name, value := range gauges {
+		m = append(m, models.Metrics{
+			ID:    name,
+			MType: models.Gauge,
+			Value: &value,
+		})
+	}
+
 	body, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -110,6 +112,6 @@ func sendMetrics(url string, m models.Metrics) (*http.Response, error) {
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := utils.NewRetryingClient().Do(req)
 	return resp, err
 }

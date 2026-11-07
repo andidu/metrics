@@ -2,6 +2,7 @@ package mfiles
 
 import (
 	"bufio"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"os"
@@ -14,7 +15,7 @@ import (
 var ErrUnsupportedType = errors.New("unsupported metric type")
 var ErrWrongFormat = errors.New("the metric doesn't have all required fields")
 
-func Restore(filename string) (handler.MemStorage, error) {
+func Restore(filename string, db *sql.DB) (handler.MemStorage, error) {
 	file, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
@@ -22,7 +23,7 @@ func Restore(filename string) (handler.MemStorage, error) {
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 
-	memStorage := service.NewMemStorage()
+	memStorage := service.NewMemStorage(db)
 
 	for {
 		if !scanner.Scan() {

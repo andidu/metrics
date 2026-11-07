@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -25,7 +26,11 @@ func (h Handler) HandleGet(writer http.ResponseWriter, request *http.Request) {
 func handleGetCounter(h Handler, writer http.ResponseWriter, name string) {
 	val, err := h.service.GetCounter(name)
 	if err != nil {
-		writer.WriteHeader(http.StatusNotFound)
+		if errors.Is(err, ErrNoElement) {
+			writer.WriteHeader(http.StatusNotFound)
+		} else {
+			writer.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -35,7 +40,11 @@ func handleGetCounter(h Handler, writer http.ResponseWriter, name string) {
 func handleGetGauge(h Handler, writer http.ResponseWriter, name string) {
 	val, err := h.service.GetGauge(name)
 	if err != nil {
-		writer.WriteHeader(http.StatusNotFound)
+		if errors.Is(err, ErrNoElement) {
+			writer.WriteHeader(http.StatusNotFound)
+		} else {
+			writer.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 

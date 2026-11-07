@@ -1,0 +1,5 @@
+CREATE TABLE metrics (
+    name VARCHAR(64) PRIMARY KEY,
+    ivalue BIGINT NULL,
+    fvalue DOUBLE PRECISION NULL
+);

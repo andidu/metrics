@@ -10,6 +10,16 @@ import (
 )
 
 func Save(filename string, m handler.MemStorage) error {
+	counters, err := m.Counters()
+	if err != nil {
+		return err
+	}
+
+	gauges, err := m.Gauges()
+	if err != nil {
+		return err
+	}
+
 	// override file on every pass
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
@@ -19,7 +29,7 @@ func Save(filename string, m handler.MemStorage) error {
 
 	writer := bufio.NewWriter(file)
 
-	for name, value := range m.Counters() {
+	for name, value := range counters {
 		m := models.Metrics{
 			ID:    name,
 			MType: models.Counter,
@@ -36,7 +46,8 @@ func Save(filename string, m handler.MemStorage) error {
 			return err
 		}
 	}
-	for name, value := range m.Gauges() {
+
+	for name, value := range gauges {
 		m := models.Metrics{
 			ID:    name,
 			MType: models.Gauge,
