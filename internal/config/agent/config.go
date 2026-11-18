@@ -8,6 +8,7 @@ import (
 
 type config struct {
 	ServerAddress string
+	HashKey       string
 	Metrics       metrics
 }
 
@@ -18,6 +19,7 @@ type metrics struct {
 
 func ParseConfig() (config, error) {
 	var serverAddress = flag.String("a", "localhost:8080", "Server IP addres")
+	var hashKey = flag.String("k", "", "Key to use for requests to the server")
 	var repeatInterval = flag.Int("r", 10, "Metrics push repeat interval in seconds")
 	var pollInterval = flag.Int("p", 2, "Metrics collection repeat interval")
 
@@ -26,6 +28,11 @@ func ParseConfig() (config, error) {
 	addressEnv, foundAddress := os.LookupEnv("ADDRESS")
 	if foundAddress {
 		serverAddress = &addressEnv
+	}
+
+	hashKeyEnv, found := os.LookupEnv("KEY")
+	if found {
+		hashKey = &hashKeyEnv
 	}
 
 	reportIntervalEnv, found, err := lookupEnvInt("REPORT_INTERVAL")
@@ -46,6 +53,7 @@ func ParseConfig() (config, error) {
 
 	return config{
 		ServerAddress: *serverAddress,
+		HashKey:       *hashKey,
 		Metrics: metrics{
 			RepeatInterval: *repeatInterval,
 			PollInterval:   *pollInterval,
