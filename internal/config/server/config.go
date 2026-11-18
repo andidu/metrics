@@ -9,6 +9,7 @@ import (
 
 type config struct {
 	ServerAddress string
+	HashKey       string
 	Store         Store
 	DB            DBConfig
 }
@@ -27,6 +28,7 @@ var ErrUnableToParseEnvVariable = errors.New("unable to parse env variable")
 
 func ParseConfig() (config, error) {
 	var serverAddress = flag.String("a", "localhost:8080", "Server IP addres")
+	var hashKey = flag.String("k", "", "Key to use to verify client requests and respond to them")
 	var storeInterval = flag.Uint("i", 300, "Interval between metrics disk dumps")
 	var fileStoragePath = flag.String("f", "metrics.txt", "File path to the metrics dump file")
 	var restore = flag.Bool("r", false, "Whether to restore metrics state from fileStoragePath")
@@ -38,6 +40,11 @@ func ParseConfig() (config, error) {
 	if found {
 		serverAddress = &addressEnv
 	}
+	hashKeyEnv, found := os.LookupEnv("KEY")
+	if found {
+		hashKey = &hashKeyEnv
+	}
+
 	storeIntervalEnv, found := os.LookupEnv("STORE_INTERVAL")
 	if found {
 		uint64Value, err := strconv.ParseUint(storeIntervalEnv, 10, 64)
@@ -68,6 +75,7 @@ func ParseConfig() (config, error) {
 
 	return config{
 		ServerAddress: *serverAddress,
+		HashKey:       *hashKey,
 		Store: Store{
 			StoreInterval:   *storeInterval,
 			FileStoragePath: *fileStoragePath,

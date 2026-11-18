@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -56,10 +57,12 @@ func main() {
 			continue
 		}
 
-		resp, err := sendMetricsBatch(URLTemplate, metrics.Counters, metrics.Gauges)
+		resp, err := sendMetricsBatch(URLTemplate, flags.HashKey, metrics.Counters, metrics.Gauges)
 		if err != nil {
 			log.Println(err.Error())
 		} else {
+			validateServerResponse(resp, flags.HashKey)
+
 			mutex.Lock()
 			for name, value := range metrics.Counters {
 				counter -= value
@@ -71,7 +74,26 @@ func main() {
 	}
 }
 
-func sendMetricsBatch(url string, counters map[string]int64, gauges map[string]float64) (*http.Response, error) {
+// No action is required per tech task, so the agent only logs the result if the response is not valid
+func validateServerResponse(resp *http.Response, hashKey string) {
+	if hashKey == "" {
+		return
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Unable to verify server response", err)
+		return
+	}
+	correctHash := utils.Hash(body, hashKey)
+	receivedHash := resp.Header.Get(utils.HashHeader)
+
+	if correctHash != receivedHash {
+		log.Println("Server response did not pass validation")
+	}
+}
+
+func sendMetricsBatch(url string, hashKey string, counters map[string]int64, gauges map[string]float64) (*http.Response, error) {
 	m := make([]models.Metrics, 0)
 	for name, value := range counters {
 		m = append(m, models.Metrics{
@@ -106,6 +128,10 @@ func sendMetricsBatch(url string, counters map[string]int64, gauges map[string]f
 
 	gw.Close()
 	req, err := http.NewRequest(http.MethodPost, url, &compressed)
+	if err != nil {
+		return nil, err
+	}
+	err = utils.SetHashHeader(req, hashKey)
 	if err != nil {
 		return nil, err
 	}
