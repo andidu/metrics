@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,9 @@ import (
 	config "github.com/andidu/metrics/internal/config/agent"
 	models "github.com/andidu/metrics/internal/model"
 	"github.com/andidu/metrics/internal/utils"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
+	"golang.org/x/sync/semaphore"
 )
 
 func main() {
@@ -30,47 +34,115 @@ func main() {
 	var sample agent.MetricsSample
 	counter := int64(0)
 
+	// Extra gauge values
+	var extraGauges = make(map[string]float64)
+
+	var errorHappened = false
+	var pullSignalExtra = make(chan struct{})
+	var pullSignalBasic = make(chan struct{})
+
 	go func() {
 		for {
-			var localCounter int64
-			mutex.Lock()
-			localCounter = counter
-			mutex.Unlock()
+			<-pullSignalExtra
 
-			metrics := agent.ObtainMetricsSample(localCounter)
+			if errorHappened {
+				return
+			}
+
+			stats, err := mem.VirtualMemory()
+			if err != nil {
+				mutex.Lock()
+				for k := range extraGauges {
+					delete(extraGauges, k)
+				}
+				mutex.Unlock()
+
+				continue
+			}
+
+			percentages, err := cpu.Percent(0, true)
+			if err != nil {
+				mutex.Lock()
+				for k := range extraGauges {
+					delete(extraGauges, k)
+				}
+				extraGauges["TotalMemory"] = float64(stats.Total)
+				extraGauges["FreeMemory"] = float64(stats.Free)
+				mutex.Unlock()
+
+				continue
+			}
+
+			mutex.Lock()
+			extraGauges["TotalMemory"] = float64(stats.Total)
+			extraGauges["FreeMemory"] = float64(stats.Free)
+			for i, x := range percentages {
+				extraGauges[fmt.Sprintf("CPUutilization%d", i+1)] = x
+			}
+			mutex.Unlock()
+		}
+	}()
+
+	go func() {
+		for {
+			<-pullSignalBasic
+
+			if errorHappened {
+				return
+			}
+
+			metrics := agent.ObtainMetricsSample()
 
 			mutex.Lock()
 			sample = metrics
 			counter += 1
 			mutex.Unlock()
+		}
+	}()
+
+	go func() {
+		for {
+			pullSignalExtra <- struct{}{}
+			pullSignalBasic <- struct{}{}
 			time.Sleep(time.Duration(flags.Metrics.PollInterval) * time.Second)
 		}
 	}()
 
+	s := semaphore.NewWeighted(int64(flags.Metrics.SendRateLimit))
+
 	for {
 		time.Sleep(time.Duration(flags.Metrics.RepeatInterval) * time.Second)
-		mutex.Lock()
-		metrics := sample
-		mutex.Unlock()
 
-		if len(metrics.Counters) == 0 && len(metrics.Gauges) == 0 {
-			continue
-		}
-
-		resp, err := sendMetricsBatch(URLTemplate, flags.HashKey, metrics.Counters, metrics.Gauges)
-		if err != nil {
-			log.Println(err.Error())
-		} else {
-			validateServerResponse(resp, flags.HashKey)
-
+		s.Acquire(context.Background(), 1)
+		go func() {
 			mutex.Lock()
-			for name, value := range metrics.Counters {
-				counter -= value
-				metrics.InvalidateCounter(name)
-			}
+			metrics := sample.Clone().AddGauges(extraGauges).AddPollCount(counter)
+			counter = 0
 			mutex.Unlock()
-			resp.Body.Close()
-		}
+
+			if len(metrics.Counters) == 0 && len(metrics.Gauges) == 0 {
+				s.Release(1)
+				return
+			}
+
+			resp, err := sendMetricsBatch(URLTemplate, flags.HashKey, metrics.Counters, metrics.Gauges)
+			if err != nil || resp.StatusCode != 200 {
+				if err != nil {
+					log.Println(err.Error())
+				} else {
+					resp.Body.Close()
+				}
+
+				mutex.Lock()
+				counter += metrics.PollCount()
+				mutex.Unlock()
+			} else {
+				validateServerResponse(resp, flags.HashKey)
+
+				resp.Body.Close()
+			}
+			s.Release(1)
+		}()
 	}
 }
 
