@@ -61,7 +61,7 @@ func main() {
 
 	r := router.MetricsRouter(h)
 
-	err = http.ListenAndServe(flags.ServerAddress, hash.WithHash(gzip.WithGzip(utils.WithLogging(r)), flags.HashKey))
+	err = http.ListenAndServe(flags.ServerAddress, gzip.WithGzip(hash.WithHash(utils.WithLogging(r), flags.HashKey)))
 	if err != nil {
 		println("Server didn't start", err.Error())
 	}

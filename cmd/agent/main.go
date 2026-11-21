@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -187,29 +186,12 @@ func sendMetricsBatch(url string, hashKey string, counters map[string]int64, gau
 		return nil, err
 	}
 
-	var compressed bytes.Buffer
-	gw, err := gzip.NewWriterLevel(&compressed, gzip.BestCompression)
+	req, err := http.NewRequest(http.MethodPost, url, io.NopCloser(bytes.NewReader(body)))
 	if err != nil {
 		return nil, err
 	}
-
-	_, err = gw.Write(body)
-	if err != nil {
-		return nil, err
-	}
-
-	gw.Close()
-	req, err := http.NewRequest(http.MethodPost, url, &compressed)
-	if err != nil {
-		return nil, err
-	}
-	err = utils.SetHashHeader(req, hashKey)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
-	resp, err := utils.NewRetryingClient().Do(req)
+	resp, err := utils.NewSigningClient(utils.NewGzipClient(utils.NewRetryingClient(http.DefaultClient)), hashKey).Do(req)
 	return resp, err
 }
