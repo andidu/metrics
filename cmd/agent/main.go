@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -34,73 +35,88 @@ func main() {
 	// Extra gauge values
 	var extraGauges = make(map[string]float64)
 
-	var errorHappened = false
-	var pullSignalExtra = make(chan struct{})
-	var pullSignalBasic = make(chan struct{})
+	var pullSignalExtra = make(chan struct{}, 1)
+	var pullSignalBasic = make(chan struct{}, 1)
+
+	var childCtx = context.Background()
+	var wg sync.WaitGroup
+	wg.Add(5)
 
 	go func() {
+		defer wg.Done()
+
 		for {
-			<-pullSignalExtra
-
-			if errorHappened {
+			select {
+			case <-childCtx.Done():
 				return
-			}
+			case <-pullSignalExtra:
+				stats, err := mem.VirtualMemory()
+				if err != nil {
+					mutex.Lock()
+					for k := range extraGauges {
+						delete(extraGauges, k)
+					}
+					mutex.Unlock()
 
-			stats, err := mem.VirtualMemory()
-			if err != nil {
-				mutex.Lock()
-				for k := range extraGauges {
-					delete(extraGauges, k)
+					continue
 				}
-				mutex.Unlock()
 
-				continue
-			}
+				percentages, err := cpu.Percent(0, true)
+				if err != nil {
+					mutex.Lock()
+					for k := range extraGauges {
+						delete(extraGauges, k)
+					}
+					extraGauges["TotalMemory"] = float64(stats.Total)
+					extraGauges["FreeMemory"] = float64(stats.Free)
+					mutex.Unlock()
 
-			percentages, err := cpu.Percent(0, true)
-			if err != nil {
-				mutex.Lock()
-				for k := range extraGauges {
-					delete(extraGauges, k)
+					continue
 				}
+
+				mutex.Lock()
 				extraGauges["TotalMemory"] = float64(stats.Total)
 				extraGauges["FreeMemory"] = float64(stats.Free)
+				for i, x := range percentages {
+					extraGauges[fmt.Sprintf("CPUutilization%d", i+1)] = x
+				}
 				mutex.Unlock()
-
-				continue
 			}
-
-			mutex.Lock()
-			extraGauges["TotalMemory"] = float64(stats.Total)
-			extraGauges["FreeMemory"] = float64(stats.Free)
-			for i, x := range percentages {
-				extraGauges[fmt.Sprintf("CPUutilization%d", i+1)] = x
-			}
-			mutex.Unlock()
 		}
 	}()
 
 	go func() {
-		for {
-			<-pullSignalBasic
+		defer wg.Done()
 
-			if errorHappened {
+		for {
+			select {
+			case <-childCtx.Done():
 				return
+			case <-pullSignalBasic:
+				metrics := agent.ObtainMetricsSample()
+
+				mutex.Lock()
+				sample = metrics
+				counter += 1
+				mutex.Unlock()
 			}
-
-			metrics := agent.ObtainMetricsSample()
-
-			mutex.Lock()
-			sample = metrics
-			counter += 1
-			mutex.Unlock()
 		}
 	}()
 
 	go func() {
+		defer wg.Done()
 		for {
-			pullSignalExtra <- struct{}{}
-			pullSignalBasic <- struct{}{}
+			select {
+			case <-childCtx.Done():
+				return
+			case pullSignalExtra <- struct{}{}:
+			}
+
+			select {
+			case <-childCtx.Done():
+				return
+			case pullSignalBasic <- struct{}{}:
+			}
 			time.Sleep(time.Duration(flags.Metrics.PollInterval) * time.Second)
 		}
 	}()
@@ -109,12 +125,28 @@ func main() {
 	results := make(chan sendWorkResult, flags.Metrics.SendRateLimit)
 
 	// spawn workers
+	var workersGroup sync.WaitGroup
 	for w := 1; w <= flags.Metrics.SendRateLimit; w++ {
-		go sendWorker(URLTemplate, flags.HashKey, jobs, results)
+		workersGroup.Add(1)
+		go func() {
+			sendWorker(childCtx, URLTemplate, flags.HashKey, jobs, results)
+			workersGroup.Done()
+		}()
 	}
+
+	// wait for all workers to finish (in case of cancellation) and close the results channel
+	go func() {
+		defer wg.Done()
+
+		workersGroup.Wait()
+		close(results)
+	}()
 
 	// send work
 	go func() {
+		defer close(jobs)
+		defer wg.Done()
+
 		for {
 			time.Sleep(time.Duration(flags.Metrics.RepeatInterval) * time.Second)
 
@@ -127,7 +159,11 @@ func main() {
 				return
 			}
 
-			jobs <- metrics
+			select {
+			case <-childCtx.Done():
+				return
+			case jobs <- metrics:
+			}
 		}
 	}()
 
@@ -139,6 +175,8 @@ func main() {
 			mutex.Unlock()
 		}
 	}
+
+	wg.Wait()
 }
 
 type sendWorkResult struct {
@@ -146,9 +184,9 @@ type sendWorkResult struct {
 	pollCount int64
 }
 
-func sendWorker(URLTemplate string, hashKey string, jobs <-chan agent.MetricsSample, results chan<- sendWorkResult) {
+func sendWorker(ctx context.Context, URLTemplate string, hashKey string, jobs <-chan agent.MetricsSample, results chan<- sendWorkResult) {
 	for metrics := range jobs {
-		resp, err := sendMetricsBatch(URLTemplate, hashKey, metrics.Counters, metrics.Gauges)
+		resp, err := sendMetricsBatch(ctx, URLTemplate, hashKey, metrics.Counters, metrics.Gauges)
 
 		if err != nil || resp.StatusCode != 200 {
 			if err != nil {
@@ -157,17 +195,25 @@ func sendWorker(URLTemplate string, hashKey string, jobs <-chan agent.MetricsSam
 				resp.Body.Close()
 			}
 
-			results <- sendWorkResult{
+			select {
+			case <-ctx.Done():
+				return
+			case results <- sendWorkResult{
 				success:   false,
 				pollCount: metrics.PollCount(),
+			}:
 			}
 		} else {
 			validateServerResponse(resp, hashKey)
 
 			resp.Body.Close()
 
-			results <- sendWorkResult{
+			select {
+			case <-ctx.Done():
+				return
+			case results <- sendWorkResult{
 				success: true,
+			}:
 			}
 		}
 	}
@@ -192,7 +238,7 @@ func validateServerResponse(resp *http.Response, hashKey string) {
 	}
 }
 
-func sendMetricsBatch(url string, hashKey string, counters map[string]int64, gauges map[string]float64) (*http.Response, error) {
+func sendMetricsBatch(ctx context.Context, url string, hashKey string, counters map[string]int64, gauges map[string]float64) (*http.Response, error) {
 	m := make([]models.Metrics, 0)
 	for name, value := range counters {
 		m = append(m, models.Metrics{
@@ -214,7 +260,7 @@ func sendMetricsBatch(url string, hashKey string, counters map[string]int64, gau
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, io.NopCloser(bytes.NewReader(body)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, io.NopCloser(bytes.NewReader(body)))
 	if err != nil {
 		return nil, err
 	}
