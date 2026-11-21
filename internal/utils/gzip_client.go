@@ -8,10 +8,10 @@ import (
 )
 
 type GzipClient struct {
-	Client HttpClient
+	Client HTTPClient
 }
 
-func NewGzipClient(client HttpClient) GzipClient {
+func NewGzipClient(client HTTPClient) GzipClient {
 	return GzipClient{
 		Client: client,
 	}

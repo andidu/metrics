@@ -5,11 +5,11 @@ import (
 )
 
 type SigningClient struct {
-	Client  HttpClient
+	Client  HTTPClient
 	hashKey string
 }
 
-func NewSigningClient(hc HttpClient, hashKey string) HttpClient {
+func NewSigningClient(hc HTTPClient, hashKey string) HTTPClient {
 	return SigningClient{
 		Client:  hc,
 		hashKey: hashKey,
