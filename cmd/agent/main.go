@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,7 +16,6 @@ import (
 	"github.com/andidu/metrics/internal/utils"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
-	"golang.org/x/sync/semaphore"
 )
 
 func main() {
@@ -107,41 +105,71 @@ func main() {
 		}
 	}()
 
-	s := semaphore.NewWeighted(int64(flags.Metrics.SendRateLimit))
+	jobs := make(chan agent.MetricsSample, flags.Metrics.SendRateLimit)
+	results := make(chan sendWorkResult, flags.Metrics.SendRateLimit)
 
-	for {
-		time.Sleep(time.Duration(flags.Metrics.RepeatInterval) * time.Second)
+	// spawn workers
+	for w := 1; w <= flags.Metrics.SendRateLimit; w++ {
+		go sendWorker(URLTemplate, flags.HashKey, jobs, results)
+	}
 
-		s.Acquire(context.Background(), 1)
-		go func() {
+	// send work
+	go func() {
+		for {
+			time.Sleep(time.Duration(flags.Metrics.RepeatInterval) * time.Second)
+
 			mutex.Lock()
 			metrics := sample.Clone().AddGauges(extraGauges).AddPollCount(counter)
 			counter = 0
 			mutex.Unlock()
 
 			if len(metrics.Counters) == 0 && len(metrics.Gauges) == 0 {
-				s.Release(1)
 				return
 			}
 
-			resp, err := sendMetricsBatch(URLTemplate, flags.HashKey, metrics.Counters, metrics.Gauges)
-			if err != nil || resp.StatusCode != 200 {
-				if err != nil {
-					log.Println(err.Error())
-				} else {
-					resp.Body.Close()
-				}
+			jobs <- metrics
+		}
+	}()
 
-				mutex.Lock()
-				counter += metrics.PollCount()
-				mutex.Unlock()
+	// recieve results and handle sending failure
+	for result := range results {
+		if !result.success {
+			mutex.Lock()
+			counter += result.pollCount
+			mutex.Unlock()
+		}
+	}
+}
+
+type sendWorkResult struct {
+	success   bool
+	pollCount int64
+}
+
+func sendWorker(URLTemplate string, hashKey string, jobs <-chan agent.MetricsSample, results chan<- sendWorkResult) {
+	for metrics := range jobs {
+		resp, err := sendMetricsBatch(URLTemplate, hashKey, metrics.Counters, metrics.Gauges)
+
+		if err != nil || resp.StatusCode != 200 {
+			if err != nil {
+				log.Println(err.Error())
 			} else {
-				validateServerResponse(resp, flags.HashKey)
-
 				resp.Body.Close()
 			}
-			s.Release(1)
-		}()
+
+			results <- sendWorkResult{
+				success:   false,
+				pollCount: metrics.PollCount(),
+			}
+		} else {
+			validateServerResponse(resp, hashKey)
+
+			resp.Body.Close()
+
+			results <- sendWorkResult{
+				success: true,
+			}
+		}
 	}
 }
 
