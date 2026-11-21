@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -57,6 +58,6 @@ func CheckHashHeader(req *http.Request, hashKey string) (bool, error) {
 func Hash(content []byte, hashKey string) string {
 	content = slices.Concat(content, []byte(hashKey))
 
-	sum := sha256.Sum256(content)
+	sum := hmac.New(sha256.New, content)
 	return fmt.Sprintf("%x", sum)
 }
