@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"maps"
 	"math/rand"
 	"runtime"
 )
@@ -10,18 +11,41 @@ type MetricsSample struct {
 	Gauges   map[string]float64
 }
 
-func (m MetricsSample) InvalidateCounter(key string) {
-	m.Counters[key] = 0
+func (m MetricsSample) Clone() MetricsSample {
+	return MetricsSample{
+		Counters: maps.Clone(m.Counters),
+		Gauges:   maps.Clone(m.Gauges),
+	}
 }
 
-func ObtainMetricsSample(counter int64) MetricsSample {
+func (m MetricsSample) AddGauges(g map[string]float64) MetricsSample {
+	if m.Gauges == nil {
+		m.Gauges = make(map[string]float64)
+	}
+
+	maps.Copy(m.Gauges, g)
+	return m
+}
+
+func (m MetricsSample) AddPollCount(counter int64) MetricsSample {
+	if m.Counters == nil {
+		m.Counters = make(map[string]int64)
+	}
+
+	m.Counters["PollCount"] = counter
+	return m
+}
+
+func (m MetricsSample) PollCount() int64 {
+	return m.Counters["PollCount"]
+}
+
+func ObtainMetricsSample() MetricsSample {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
 
 	return MetricsSample{
-		Counters: map[string]int64{
-			"PollCount": counter,
-		},
+		Counters: map[string]int64{},
 		Gauges: map[string]float64{
 			"Alloc":         float64(stats.Alloc),
 			"BuckHashSys":   float64(stats.BuckHashSys),

@@ -7,12 +7,12 @@ import (
 )
 
 type RetryingClient struct {
-	*http.Client
+	Client HTTPClient
 }
 
-func NewRetryingClient() RetryingClient {
+func NewRetryingClient(hc HTTPClient) HTTPClient {
 	return RetryingClient{
-		http.DefaultClient,
+		Client: hc,
 	}
 }
 

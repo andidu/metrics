@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"flag"
 	"os"
 	"strconv"
@@ -8,24 +9,33 @@ import (
 
 type config struct {
 	ServerAddress string
+	HashKey       string
 	Metrics       metrics
 }
 
 type metrics struct {
 	RepeatInterval int
 	PollInterval   int
+	SendRateLimit  int
 }
 
 func ParseConfig() (config, error) {
 	var serverAddress = flag.String("a", "localhost:8080", "Server IP addres")
+	var hashKey = flag.String("k", "", "Key to use for requests to the server")
 	var repeatInterval = flag.Int("r", 10, "Metrics push repeat interval in seconds")
 	var pollInterval = flag.Int("p", 2, "Metrics collection repeat interval")
+	var sendRateLimit = flag.Int("l", 1, "Max rate for the concurrent metrics sending")
 
 	flag.Parse()
 
 	addressEnv, foundAddress := os.LookupEnv("ADDRESS")
 	if foundAddress {
 		serverAddress = &addressEnv
+	}
+
+	hashKeyEnv, found := os.LookupEnv("KEY")
+	if found {
+		hashKey = &hashKeyEnv
 	}
 
 	reportIntervalEnv, found, err := lookupEnvInt("REPORT_INTERVAL")
@@ -44,11 +54,25 @@ func ParseConfig() (config, error) {
 		pollInterval = &pollIntervalEnv
 	}
 
+	sendRateLimitEnv, found, err := lookupEnvInt("RATE_LIMIT")
+	if err != nil {
+		return config{}, err
+	}
+	if found {
+		sendRateLimit = &sendRateLimitEnv
+	}
+
+	if *sendRateLimit <= 0 {
+		return config{}, errors.New("unsupported rate limit")
+	}
+
 	return config{
 		ServerAddress: *serverAddress,
+		HashKey:       *hashKey,
 		Metrics: metrics{
 			RepeatInterval: *repeatInterval,
 			PollInterval:   *pollInterval,
+			SendRateLimit:  *sendRateLimit,
 		},
 	}, nil
 }

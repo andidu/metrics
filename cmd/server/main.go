@@ -8,6 +8,7 @@ import (
 	config "github.com/andidu/metrics/internal/config/server"
 	"github.com/andidu/metrics/internal/gzip"
 	"github.com/andidu/metrics/internal/handler"
+	"github.com/andidu/metrics/internal/hash"
 	"github.com/andidu/metrics/internal/mfiles"
 	"github.com/andidu/metrics/internal/router"
 	"github.com/andidu/metrics/internal/service"
@@ -60,7 +61,7 @@ func main() {
 
 	r := router.MetricsRouter(h)
 
-	err = http.ListenAndServe(flags.ServerAddress, gzip.WithGzip(utils.WithLogging(r)))
+	err = http.ListenAndServe(flags.ServerAddress, gzip.WithGzip(hash.WithHash(utils.WithLogging(r), flags.HashKey)))
 	if err != nil {
 		println("Server didn't start", err.Error())
 	}
